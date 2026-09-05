@@ -1,0 +1,120 @@
+/* ============================================================
+   PeoplePay360 — Design Tokens
+   All colors, radii, shadows, spacing and type sizes live here.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Typography */
+  --font-primary: 'Inter', sans-serif;
+  --font-handwritten: 'Caveat', cursive;
+  
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+
+  /* Spacing */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* Light Theme Variables */
+:root[data-theme='light'] {
+  --bg: #f9f9f9;
+  --surface: #ffffff;
+  --elevated: #f0f0f0;
+  
+  --primary: #2b5cff;
+  --primary-hover: #1e45d1;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted: #888888;
+
+  --border: #e0e0e0;
+  --border-focus: #2b5cff;
+  
+  --input-bg: #ffffff;
+  --input-border: #cccccc;
+  --input-placeholder: #aaaaaa;
+
+  --nav-active: #2b5cff;
+  --nav-active-bg: #e6ecff;
+
+  --success: #15803d;
+  --success-muted: #dcfce7;
+  
+  --warning: #b45309;
+  --warning-muted: #fef3c7;
+  
+  --error: #b91c1c;
+  --error-muted: #fee2e2;
+
+  --info: #0369a1;
+  --info-muted: #e0f2fe;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Dark Theme Variables (Default) */
+:root, :root[data-theme='dark'] {
+  --bg: #121212;
+  --surface: #1e1e1e;
+  --elevated: #2a2a2a;
+  
+  --primary: #4f7bff;
+  --primary-hover: #6e92ff;
+
+  --text-primary: #f5f5f5;
+  --text-secondary: #cccccc;
+  --text-muted: #888888;
+
+  --border: #333333;
+  --border-focus: #4f7bff;
+  
+  --input-bg: #1e1e1e;
+  --input-border: #444444;
+  --input-placeholder: #666666;
+
+  --nav-active: #4f7bff;
+  --nav-active-bg: rgba(79, 123, 255, 0.15);
+
+  --success: #4ade80;
+  --success-muted: rgba(74, 222, 128, 0.15);
+  
+  --warning: #fbbf24;
+  --warning-muted: rgba(251, 191, 36, 0.15);
+  
+  --error: #f87171;
+  --error-muted: rgba(248, 113, 113, 0.15);
+
+  --info: #38bdf8;
+  --info-muted: rgba(56, 189, 248, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+}

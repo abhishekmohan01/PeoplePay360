@@ -1,0 +1,32 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--sp-6);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.page-header-title {
+  margin: 0;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.page-header-subtitle {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}

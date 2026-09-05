@@ -1,0 +1,51 @@
+.emp-card {
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.emp-card::backdrop {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.emp-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.emp-card-info h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.emp-card-info p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.emp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.emp-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+}
+
+.emp-meta-label {
+  color: var(--text-muted);
+}
+
+.emp-card-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+}
