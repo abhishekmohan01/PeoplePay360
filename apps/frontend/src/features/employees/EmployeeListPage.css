@@ -1,0 +1,29 @@
+.emp-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.emp-toolbar {
+  margin-bottom: var(--sp-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+
+.emp-loading, .emp-error, .emp-empty {
+  text-align: center;
+  padding: var(--sp-10);
+  font-family: var(--font-handwritten);
+  color: var(--text-secondary);
+}
+
+.emp-error {
+  color: var(--error);
+}

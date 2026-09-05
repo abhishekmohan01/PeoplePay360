@@ -1,0 +1,71 @@
+.topnav {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-4);
+  height: 64px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin: var(--sp-4);
+}
+
+.topnav-brand {
+  display: flex;
+  align-items: center;
+  margin-right: var(--sp-6);
+}
+
+.topnav-logo {
+  font-family: var(--font-handwritten);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  background-color: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-1) var(--sp-3);
+  color: var(--primary);
+}
+
+.topnav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex: 1;
+}
+
+.nav-link {
+  font-family: var(--font-handwritten);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+  background-color: var(--elevated);
+}
+
+.nav-link.active {
+  color: var(--nav-active);
+}
+
+.topnav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.nav-logout-btn {
+  background: transparent;
+  border: none;
+  font-family: var(--font-handwritten);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.nav-logout-btn:hover {
+  color: var(--error);
+}

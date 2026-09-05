@@ -4,18 +4,30 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/index.ts",
-    "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
+    "dev": "concurrently \"tailwindcss -i src/tailwind-input.css -o src/tailwind.css --watch\" \"bun --hot src/index.ts\"",
+    "build:css": "tailwindcss -i src/tailwind-input.css -o src/tailwind.css --minify",
+    "build": "bun run build:css && bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.41.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "react-hook-form": "^7.87.0",
+    "react-router-dom": "^7.18.3",
+    "recharts": "^3.10.1",
+    "zod": "^4.5.4",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/bun": "latest"
+    "concurrently": "^10.0.5",
+    "tailwindcss": "^4.3.3"
   },
   "peerDependencies": {
     "typescript": "^7"
