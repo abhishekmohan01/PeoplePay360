@@ -26,7 +26,7 @@ export const EmployeeCard = ({ employee }: { employee: Employee }) => {
       <div className="emp-card-body">
         <div className="emp-meta">
           <span className="emp-meta-label">Dept:</span>
-          <span>{employee.department}</span>
+          <span>{employee.departmentName || employee.department?.name}</span>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { requireRoles } from "../../middleware/rbac";
 export const dashboardRouter = Router();
 
 dashboardRouter.use(authenticateJWT);
-dashboardRouter.use(requireRoles("PAYROLL_USER", "HR_MANAGER"));
+dashboardRouter.use(requireRoles("PAYROLL_USER", "HR_MANAGER", "ADMIN"));
 
 // Helper to parse date filters
 function parsePeriod(periodStr?: string) {
@@ -311,3 +311,31 @@ dashboardRouter.get("/department-overview", async (req, res, next) => {
     next(err);
   }
 });
+
+// GET /api/dashboard/warnings - Unresolved warnings for HR & Payroll
+dashboardRouter.get("/warnings", async (req, res, next) => {
+  try {
+    const { companyId } = req.query;
+    const warnings = await prisma.payrollWarning.findMany({
+      where: {
+        isResolved: false,
+        ...(companyId ? { companyId: String(companyId) } : {}),
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            department: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json(warnings);
+  } catch (err) {
+    next(err);
+  }
+});
+

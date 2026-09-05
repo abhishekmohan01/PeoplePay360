@@ -1,61 +1,63 @@
-// Mock data type
+import { apiClient } from '../client';
+
 export interface Employee {
   id: string;
+  employeeCode: string;
+  companyId?: string;
+  departmentId?: string;
+  managerId?: string | null;
+  firstName: string;
+  lastName: string;
   name: string;
+  workEmail: string;
   email: string;
+  workPhone?: string | null;
   jobPosition: string;
-  department: string;
-  manager?: string;
+  employeeType?: string;
+  status: string;
+  department?: { id: string; name: string; code: string };
+  departmentName?: string;
+  company?: { id: string; name: string };
+  companyName?: string;
+  manager?: { id: string; firstName: string; lastName: string; employeeCode?: string; jobPosition?: string } | null;
+  managerName?: string;
+  contracts?: Array<{ id: string; contractNumber?: string; wage?: number; status?: string; salaryStructure?: any; workingSchedule?: any }>;
   workingSchedule?: string;
-  company: string;
-  workLocation: string;
-  status: 'Active' | 'Inactive';
+  workLocation?: string;
+  _count?: {
+    contracts: number;
+    attendances: number;
+    timeOffRequests: number;
+    timeOffAllocations?: number;
+    payslips: number;
+  };
 }
 
-const mockEmployees: Employee[] = [
-  {
-    id: 'emp-1',
-    name: 'Anita Oliver',
-    email: 'anita@oxp.com',
-    jobPosition: 'HR Manager',
-    department: 'HR',
-    company: 'OXP Pvt Ltd',
-    workLocation: 'New York',
-    status: 'Active',
-    workingSchedule: 'Standard 40h'
-  },
-  {
-    id: 'emp-2',
-    name: 'Audrey Peterson',
-    email: 'audrey@oxp.com',
-    jobPosition: 'Sales Executive',
-    department: 'Sales',
-    company: 'OXP Pvt Ltd',
-    workLocation: 'Chicago',
-    status: 'Active',
-    workingSchedule: 'Standard 40h'
-  },
-  {
-    id: 'emp-3',
-    name: 'Billy Kyle',
-    email: 'billy@oxp.com',
-    jobPosition: 'Support Agent',
-    department: 'Support',
-    company: 'OXP Pvt Ltd',
-    workLocation: 'Remote',
-    status: 'Active',
-    workingSchedule: 'Part Time 20h'
-  }
-];
+function normalizeEmployee(emp: any): Employee {
+  const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || 'Unnamed';
+  const departmentName = emp.department?.name || (typeof emp.department === 'string' ? emp.department : 'General');
+  const companyName = emp.company?.name || 'PeoplePay360 Inc.';
+  const managerName = emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : undefined;
+  const scheduleName = emp.contracts?.[0]?.workingSchedule?.name || 'Standard 40h';
+
+  return {
+    ...emp,
+    name,
+    email: emp.workEmail || emp.email || '',
+    departmentName,
+    companyName,
+    managerName,
+    workingSchedule: scheduleName,
+    workLocation: emp.workLocation || 'Headquarters',
+  };
+}
 
 export async function getEmployees(): Promise<Employee[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockEmployees;
+  const employees = await apiClient.get<any[]>('/employees');
+  return employees.map(normalizeEmployee);
 }
 
 export async function getEmployee(id: string): Promise<Employee> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const emp = mockEmployees.find(e => e.id === id);
-  if (!emp) throw new Error('Employee not found');
-  return emp;
+  const emp = await apiClient.get<any>(`/employees/${id}`);
+  return normalizeEmployee(emp);
 }

@@ -13,7 +13,9 @@ export const ContractDetail = () => {
       
       {/* Top Header */}
       <div className="mb-10">
-        <h1 className="text-4xl font-[Caveat] font-bold m-0 text-text-primary uppercase tracking-wide">Contract / {contract.id}</h1>
+        <h1 className="text-4xl font-[Caveat] font-bold m-0 text-text-primary uppercase tracking-wide">
+          Contract / {contract.contractNumber || contract.id}
+        </h1>
         <p className="text-muted m-0 mt-2 font-[Caveat] text-xl">Form view of one contract</p>
       </div>
 
@@ -36,7 +38,7 @@ export const ContractDetail = () => {
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Status</label>
-            <input type="text" readOnly value={contract.status === 'Active' ? 'Running' : contract.status} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={contract.status === 'RUNNING' || contract.status === 'Active' ? 'Running' : contract.status} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
           </div>
         </div>
 
@@ -44,11 +46,11 @@ export const ContractDetail = () => {
         <div className="flex flex-col gap-8">
           <div className="flex items-center">
             <label className="w-40 text-muted">Department</label>
-            <input type="text" readOnly value="Finance" className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={contract.departmentName || contract.department?.name || 'General'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Job Position</label>
-            <input type="text" readOnly value="Payroll Specialist" className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={contract.jobPosition || 'Staff'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Wage / Month</label>
@@ -56,7 +58,7 @@ export const ContractDetail = () => {
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Working Schedule</label>
-            <input type="text" readOnly value="40 Hours / Week" className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={contract.scheduleName || contract.workingSchedule?.name || 'Standard 40h'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
           </div>
         </div>
 

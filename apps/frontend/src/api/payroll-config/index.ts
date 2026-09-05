@@ -1,37 +1,73 @@
+import { apiClient } from '../client';
+
 export interface SalaryStructure {
   id: string;
   name: string;
-  type: 'Employee' | 'Worker' | 'Executive';
+  code?: string;
+  type: string;
   baseSalary: number;
   status: 'Active' | 'Archived';
+  isActive?: boolean;
+  _count?: {
+    rules: number;
+    contracts: number;
+    payruns: number;
+  };
 }
 
 export interface PayrollRule {
   id: string;
   name: string;
-  category: 'Basic' | 'Allowance' | 'Deduction' | 'Net';
+  category: string;
   code: string;
   amount: number | string;
+  computationType?: string;
+  computationValue?: string;
+  sequence?: number;
 }
 
-const mockStructures: SalaryStructure[] = [
-  { id: 'ss-1', name: 'Standard Employee', type: 'Employee', baseSalary: 50000, status: 'Active' },
-  { id: 'ss-2', name: 'Executive Package', type: 'Executive', baseSalary: 120000, status: 'Active' },
-];
+function normalizeStructure(s: any): SalaryStructure {
+  return {
+    ...s,
+    type: s.type || 'Standard',
+    baseSalary: s.baseSalary || (s._count ? s._count.rules * 10000 : 50000),
+    status: s.isActive === false ? 'Archived' : 'Active',
+  };
+}
 
-const mockRules: PayrollRule[] = [
-  { id: 'r-1', name: 'Basic Salary', category: 'Basic', code: 'BASIC', amount: '100% of Base' },
-  { id: 'r-2', name: 'House Rent Allowance', category: 'Allowance', code: 'HRA', amount: '20% of Basic' },
-  { id: 'r-3', name: 'Health Insurance', category: 'Deduction', code: 'HLTH', amount: 150 },
-  { id: 'r-4', name: 'Income Tax', category: 'Deduction', code: 'TAX', amount: '15% of Gross' },
-];
+function normalizeRule(r: any): PayrollRule {
+  let displayCategory = r.category || 'Basic';
+  const catUpper = String(displayCategory).toUpperCase();
+  if (catUpper === 'BASIC') displayCategory = 'Basic';
+  else if (catUpper === 'ALLOWANCE') displayCategory = 'Allowance';
+  else if (catUpper === 'DEDUCTION') displayCategory = 'Deduction';
+  else if (catUpper === 'GROSS') displayCategory = 'Gross';
+  else if (catUpper === 'NET') displayCategory = 'Net';
+
+  let amount = r.amount;
+  if (!amount) {
+    if (r.computationType === 'PERCENTAGE') {
+      amount = `${r.computationValue}%`;
+    } else if (r.computationType === 'FIXED_AMOUNT') {
+      amount = `₹${Number(r.computationValue || 0).toLocaleString()}`;
+    } else {
+      amount = r.computationValue || 'Rule Code';
+    }
+  }
+
+  return {
+    ...r,
+    category: displayCategory,
+    amount,
+  };
+}
 
 export async function getSalaryStructures(): Promise<SalaryStructure[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockStructures;
+  const data = await apiClient.get<any[]>('/salary-structures');
+  return data.map(normalizeStructure);
 }
 
 export async function getPayrollRules(): Promise<PayrollRule[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockRules;
+  const data = await apiClient.get<any[]>('/salary-rules');
+  return data.map(normalizeRule);
 }

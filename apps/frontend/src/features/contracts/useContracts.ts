@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { getContracts, getContract, type Contract } from '../../api/contracts';
 
-export function useContracts() {
+export function useContracts(employeeId?: string) {
   return useQuery<Contract[], Error>({
-    queryKey: ['contracts'],
-    queryFn: getContracts,
+    queryKey: ['contracts', employeeId],
+    queryFn: () => getContracts(employeeId),
   });
 }
 

@@ -6,6 +6,13 @@ import { Plus } from 'lucide-react';
 export const UserManagementPage = () => {
   const { data: users, isLoading } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = users?.filter(user =>
+    (user.employeeName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (user.role || '').toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col h-full font-primary w-full max-w-5xl mx-auto mt-4">
@@ -27,13 +34,12 @@ export const UserManagementPage = () => {
         <div className="flex-1">
           <input 
             type="text" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search users, employees or email..." 
             className="w-full h-full border border-border bg-surface px-4 rounded-lg font-[Caveat] text-lg text-text-primary focus:outline-none focus:border-primary"
           />
         </div>
-        <button className="border border-border bg-surface hover:bg-elevated text-text-primary px-6 py-2 rounded-lg !font-handwritten text-lg transition-colors whitespace-nowrap">
-          Role Filter
-        </button>
       </div>
 
       {/* Table Card */}
@@ -51,7 +57,7 @@ export const UserManagementPage = () => {
             {isLoading ? (
               <tr><td colSpan={4} className="p-8 text-center font-[Caveat] text-muted text-lg">Loading users...</td></tr>
             ) : (
-              users?.map((user, i) => (
+              filtered?.map((user, i) => (
                 <tr key={user.id} className="border-t border-border hover:bg-elevated/30 transition-colors relative group">
                   <td className={`p-4 font-[Caveat] text-lg relative ${i === 0 ? 'pl-5' : ''}`}>
                     {/* Blue active indicator line */}

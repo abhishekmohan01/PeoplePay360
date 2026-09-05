@@ -99,14 +99,27 @@ payrunRouter.get("/", async (req, res, next) => {
 // Step 2: POST /api/payruns - create payrun with selected employees
 payrunRouter.post("/", async (req, res, next) => {
   try {
-    const { companyId, salaryStructureId, name, periodStart, periodEnd, employeeIds } = req.body;
+    let { companyId, salaryStructureId, name, periodStart, periodEnd, employeeIds } = req.body;
 
-    if (!companyId || !salaryStructureId || !name || !periodStart || !periodEnd) {
-      return res.status(400).json({ error: true, message: "Missing required payrun parameters" });
+    if (!companyId) {
+      const comp = await prisma.company.findFirst();
+      companyId = comp?.id;
+    }
+
+    if (!salaryStructureId || !name || !periodStart || !periodEnd) {
+      return res.status(400).json({ error: true, message: "Missing required payrun parameters (name, periodStart, periodEnd, salaryStructureId)" });
     }
 
     if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
-      return res.status(400).json({ error: true, message: "At least one employee must be selected" });
+      const eligibleContracts = await prisma.contract.findMany({
+        where: { salaryStructureId, status: "RUNNING" },
+        select: { employeeId: true },
+      });
+      employeeIds = eligibleContracts.map((c) => c.employeeId);
+    }
+
+    if (!employeeIds || employeeIds.length === 0) {
+      return res.status(400).json({ error: true, message: "No employees with active running contracts found for this structure" });
     }
 
     const pStart = new Date(periodStart);

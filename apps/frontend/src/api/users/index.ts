@@ -1,29 +1,61 @@
+import { apiClient } from '../client';
+
 export interface UserAccount {
   id: string;
   name: string;
   employeeName: string;
   email: string;
-  role: 'Employee' | 'Hr Manager' | 'Hr Payroll User' | 'Hr Payroll Admin' | 'Admin' | 'Time Off Admin' | 'Time Off User' | 'Payroll User' | 'Payroll Admin';
-  status: 'Active' | 'Inactive';
+  role: string;
+  roles: Array<{ id: string; code: string; name: string }>;
+  status: string;
+  employeeId?: string | null;
+  employee?: {
+    id: string;
+    employeeCode: string;
+    firstName: string;
+    lastName: string;
+    workEmail: string;
+    jobPosition: string;
+    department?: { id: string; name: string };
+  } | null;
 }
 
-export const mockUsers: UserAccount[] = [
-  { id: 'u-admin', name: 'Super Admin', employeeName: 'Super Admin', email: 'superadmin@company.com', role: 'Admin', status: 'Active' },
-  { id: 'u-emp', name: 'John Employee', employeeName: 'John Employee', email: 'employee@company.com', role: 'Employee', status: 'Active' },
-  { id: 'u-1', name: 'Aarav Mehta', employeeName: 'Aarav Mehta', email: 'aarav@company.com', role: 'Payroll User', status: 'Active' },
-  { id: 'u-2', name: 'Maya Shah', employeeName: 'Maya Shah', email: 'maya@company.com', role: 'Time Off Admin', status: 'Active' },
-  { id: 'u-3', name: 'Rohan Patel', employeeName: 'Rohan Patel', email: 'rohan@company.com', role: 'Time Off User', status: 'Active' },
-  { id: 'u-4', name: 'Nisha Rao', employeeName: 'Nisha Rao', email: 'nisha@company.com', role: 'Payroll Admin', status: 'Active' },
-];
+function normalizeUser(u: any): UserAccount {
+  const employeeName = u.employee 
+    ? `${u.employee.firstName} ${u.employee.lastName}`.trim() 
+    : (u.employeeName || u.email.split('@')[0]);
+
+  const roleList: Array<{ id: string; code: string; name: string }> = Array.isArray(u.roles)
+    ? u.roles.map((r: any) => typeof r === 'string' ? { id: r, code: r, name: r } : (r.role || r))
+    : [];
+
+  const mainRole = roleList.length > 0 
+    ? roleList.map(r => r.name || r.code).join(', ') 
+    : (u.role || 'Employee');
+
+  return {
+    ...u,
+    name: employeeName,
+    employeeName,
+    role: mainRole,
+    roles: roleList,
+    status: u.status === 'ACTIVE' ? 'Active' : (u.status || 'Active'),
+  };
+}
 
 export async function getUsers(): Promise<UserAccount[]> {
-  await new Promise(resolve => setTimeout(resolve, 400));
-  return mockUsers;
+  const data = await apiClient.get<any[]>('/users');
+  return data.map(normalizeUser);
 }
 
-export async function createUser(data: Partial<UserAccount>): Promise<UserAccount> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newUser = { ...data, id: `u-${Date.now()}` } as UserAccount;
-  mockUsers.push(newUser);
-  return newUser;
+export async function createUser(data: any): Promise<UserAccount> {
+  const roleCode = data.role ? data.role.toUpperCase().replace(/\s+/g, '_') : 'EMPLOYEE';
+  const payload = {
+    email: data.email,
+    password: data.password || 'password123',
+    employeeId: data.employeeId || null,
+    roleCodes: data.roleCodes || [roleCode],
+  };
+  const created = await apiClient.post<any>('/users', payload);
+  return normalizeUser(created);
 }

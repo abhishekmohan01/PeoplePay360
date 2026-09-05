@@ -1,8 +1,21 @@
 import { useAuthStore } from '../stores/auth.store';
 
 // We'll point this to our backend eventually.
-// For now, it will be the base for our mocked requests if we need network simulation.
-const API_BASE = import.meta.env.BUN_PUBLIC_API_URL || '/api';
+const getApiBase = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.BUN_PUBLIC_API_URL) {
+      return process.env.BUN_PUBLIC_API_URL;
+    }
+  } catch {}
+  try {
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.BUN_PUBLIC_API_URL) {
+      return (import.meta as any).env.BUN_PUBLIC_API_URL;
+    }
+  } catch {}
+  return 'http://localhost:4000/api';
+};
+
+const API_BASE = getApiBase();
 
 export class ApiError extends Error {
   status: number;

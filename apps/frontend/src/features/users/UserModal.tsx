@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCreateUser } from './useUsers';
+import { useEmployees } from '../employees/useEmployees';
 import { X } from 'lucide-react';
 
 interface UserModalProps {
@@ -8,17 +9,30 @@ interface UserModalProps {
 
 export const UserModal = ({ onClose }: UserModalProps) => {
   const { mutate: createUser } = useCreateUser();
-  const [employee, setEmployee] = useState('');
+  const { data: employees } = useEmployees();
+  const [employeeId, setEmployeeId] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Employee');
 
+  const handleEmployeeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    setEmployeeId(selectedId);
+    const emp = employees?.find(em => em.id === selectedId);
+    if (emp) {
+      setEmployeeName(emp.name);
+      setEmail(emp.email || emp.workEmail || '');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employee || !email) return;
+    if (!email) return;
 
     createUser({
-      name: employee,
-      employeeName: employee,
+      employeeId: employeeId || null,
+      name: employeeName || email.split('@')[0],
+      employeeName: employeeName || email.split('@')[0],
       email,
       role: role as any,
       status: 'Active'
@@ -48,16 +62,16 @@ export const UserModal = ({ onClose }: UserModalProps) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-[Caveat] font-bold">Employee *</label>
+            <label className="text-sm font-[Caveat] font-bold">Employee</label>
             <select 
               className="border border-border bg-surface p-2 rounded-lg text-sm font-[Caveat]"
-              value={employee}
-              onChange={e => setEmployee(e.target.value)}
-              required
+              value={employeeId}
+              onChange={handleEmployeeChange}
             >
-              <option value="" disabled>Select employee</option>
-              <option value="Advay Anand">Advay Anand</option>
-              <option value="John Doe">John Doe</option>
+              <option value="">No linked employee (Direct User)</option>
+              {employees?.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name} ({emp.departmentName || 'General'})</option>
+              ))}
             </select>
           </div>
 

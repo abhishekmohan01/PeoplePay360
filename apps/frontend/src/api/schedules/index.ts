@@ -1,32 +1,32 @@
+import { apiClient } from '../client';
+
 export interface Schedule {
   id: string;
   name: string;
-  type: 'Fixed' | 'Flexible' | 'Shift';
+  type: 'Fixed' | 'Flexible' | 'Shift' | string;
   hoursPerWeek: number;
   assignedEmployees: number;
   status: 'Active' | 'Archived';
+  timezone?: string;
 }
 
-const mockSchedules: Schedule[] = [
-  {
-    id: 'sch-1',
-    name: 'Standard 40h',
-    type: 'Fixed',
-    hoursPerWeek: 40,
-    assignedEmployees: 120,
-    status: 'Active'
-  },
-  {
-    id: 'sch-2',
-    name: 'Part Time 20h',
-    type: 'Flexible',
-    hoursPerWeek: 20,
-    assignedEmployees: 15,
-    status: 'Active'
-  }
-];
+function normalizeSchedule(s: any): Schedule {
+  const totalHours = Array.isArray(s.days)
+    ? s.days.reduce((sum: number, d: any) => sum + Number(d.hoursPerDay || 0), 0)
+    : 40;
+
+  return {
+    id: s.id,
+    name: s.name,
+    type: totalHours >= 40 ? 'Fixed' : 'Flexible',
+    hoursPerWeek: totalHours || 40,
+    assignedEmployees: s._count?.contracts ?? 0,
+    status: s.isActive === false ? 'Archived' : 'Active',
+    timezone: s.timezone,
+  };
+}
 
 export async function getSchedules(): Promise<Schedule[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockSchedules;
+  const data = await apiClient.get<any[]>('/working-schedules');
+  return data.map(normalizeSchedule);
 }

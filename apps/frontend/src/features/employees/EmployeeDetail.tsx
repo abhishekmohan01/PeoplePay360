@@ -21,28 +21,36 @@ export const EmployeeDetail = () => {
 
       {/* Action Bar */}
       <div className="flex justify-between items-center mb-8">
-        <button className="px-6 py-2 border-2 border-border/80 rounded-xl font-[Caveat] font-bold tracking-widest text-text-primary bg-surface hover:bg-elevated transition-colors uppercase">
-          Edit
-        </button>
+        {canManageHR ? (
+          <button className="px-6 py-2 border-2 border-border/80 rounded-xl font-[Caveat] font-bold tracking-widest text-text-primary bg-surface hover:bg-elevated transition-colors uppercase cursor-pointer">
+            Edit
+          </button>
+        ) : (
+          <span className="px-4 py-1.5 border border-border/80 rounded-xl font-[Caveat] text-muted text-lg bg-surface/50">
+            Personal Profile (Read-Only)
+          </span>
+        )}
         
         <div className="flex gap-4">
           <button 
-            onClick={() => navigate('/time-off')}
-            className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors"
+            onClick={() => navigate(`/time-off?employeeId=${employee.id}`)}
+            className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors cursor-pointer"
           >
-            Time Off 3
+            Time Off {employee._count?.timeOffRequests ?? 0}
           </button>
+          {canManageHR && (
+            <button 
+              onClick={() => navigate(`/contracts?employeeId=${employee.id}`)}
+              className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors cursor-pointer"
+            >
+              Contracts {employee._count?.contracts ?? 0}
+            </button>
+          )}
           <button 
-            onClick={() => navigate('/contracts')}
-            className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors"
+            onClick={() => navigate(`/attendance?employeeId=${employee.id}`)}
+            className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors cursor-pointer"
           >
-            Contracts 2
-          </button>
-          <button 
-            onClick={() => navigate('/attendance')}
-            className="px-4 py-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-xl font-[Caveat] font-bold hover:bg-blue-100 transition-colors"
-          >
-            Attendance ..
+            Attendance {employee._count?.attendances ?? 0}
           </button>
         </div>
       </div>
@@ -50,12 +58,12 @@ export const EmployeeDetail = () => {
       {/* Profile Header */}
       <div className="flex items-center gap-6 mb-10">
         <div className="w-24 h-24 bg-blue-100 text-blue-700 rounded-3xl border border-blue-200 flex items-center justify-center font-[Caveat] font-bold text-3xl shadow-sm">
-          {employee.name.split(' ').map(n => n[0]).join('')}
+          {(employee.name || 'EP').split(' ').filter(Boolean).map(n => n[0]).join('')}
         </div>
         <div className="flex flex-col">
           <h2 className="text-4xl font-[Caveat] font-bold text-text-primary m-0 mb-2">{employee.name}</h2>
-          <div className="text-muted font-[Caveat] text-xl">{employee.jobPosition} • {employee.department}</div>
-          <div className="text-muted text-sm font-primary mt-1">{employee.email} | +91 98765 43210</div>
+          <div className="text-muted font-[Caveat] text-xl">{employee.jobPosition} • {employee.departmentName || employee.department?.name}</div>
+          <div className="text-muted text-sm font-primary mt-1">{employee.email || employee.workEmail} | {employee.workPhone || 'N/A'}</div>
         </div>
       </div>
 
@@ -76,19 +84,19 @@ export const EmployeeDetail = () => {
         <div className="flex flex-col gap-6">
           <div className="flex items-center">
             <label className="w-40 text-muted">Department</label>
-            <input type="text" readOnly value={employee.department} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.departmentName || employee.department?.name || ''} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Manager</label>
-            <input type="text" readOnly value={employee.manager || 'Sara Khan'} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.managerName || (employee.manager ? `${employee.manager.firstName} ${employee.manager.lastName}` : 'None')} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Working Schedule</label>
-            <input type="text" readOnly value={employee.workingSchedule || '40 Hours / Week'} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.workingSchedule || 'Standard 40h'} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Company</label>
-            <input type="text" readOnly value={employee.company} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.companyName || employee.company?.name || 'PeoplePay360 Inc.'} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
         </div>
 
@@ -100,7 +108,7 @@ export const EmployeeDetail = () => {
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Work Location</label>
-            <input type="text" readOnly value={employee.workLocation} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.workLocation || 'Main Office'} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Status</label>
@@ -108,7 +116,7 @@ export const EmployeeDetail = () => {
           </div>
           <div className="flex items-center">
             <label className="w-40 text-muted">Work Email</label>
-            <input type="text" readOnly value={employee.email} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
+            <input type="text" readOnly value={employee.email || employee.workEmail} className="flex-1 border border-border/80 rounded-lg px-3 py-1.5 bg-surface text-text-primary focus:outline-none" />
           </div>
         </div>
 

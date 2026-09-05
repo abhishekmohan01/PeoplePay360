@@ -12,6 +12,8 @@ import { AttendanceDetail } from '../features/attendance/AttendanceDetail';
 import { TimeOffPage } from '../features/time-off/TimeOffPage';
 import { PayrollConfigPage } from '../features/payroll-config/PayrollConfigPage';
 import { PayrollDashboardPage } from '../features/payroll/PayrollDashboardPage';
+import { PayrunListPage } from '../features/payroll/PayrunListPage';
+import { PayrunDetailPage } from '../features/payroll/PayrunDetailPage';
 import { UserManagementPage } from '../features/users/UserManagementPage';
 
 // We'll import real pages as they are built.
@@ -29,6 +31,31 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+  return <>{children}</>;
+};
+
+// Role-Based Route Guard
+const RoleRoute = ({
+  children,
+  allowedRoles,
+  redirectPath = '/attendance',
+}: {
+  children: React.ReactNode;
+  allowedRoles: string[];
+  redirectPath?: string;
+}) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const hasAnyRole = useAuthStore((state) => state.hasAnyRole);
+  const isAdmin = useAuthStore((state) => state.isAdmin)();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin && !hasAnyRole(allowedRoles)) {
+    return <Navigate to={redirectPath} replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -58,15 +85,27 @@ export const router = createBrowserRouter([
   },
   {
     path: '/contracts',
-    element: <ProtectedRoute><AppShell><ContractListPage /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
+        <AppShell><ContractListPage /></AppShell>
+      </RoleRoute>
+    ),
   },
   {
     path: '/contracts/:contractId',
-    element: <ProtectedRoute><AppShell><ContractDetail /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
+        <AppShell><ContractDetail /></AppShell>
+      </RoleRoute>
+    ),
   },
   {
     path: '/working-schedules',
-    element: <ProtectedRoute><AppShell><ScheduleListPage /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['HR_MANAGER', 'ADMIN']}>
+        <AppShell><ScheduleListPage /></AppShell>
+      </RoleRoute>
+    ),
   },
   {
     path: '/attendance',
@@ -82,15 +121,42 @@ export const router = createBrowserRouter([
   },
   {
     path: '/payroll-config',
-    element: <ProtectedRoute><AppShell><PayrollConfigPage /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['PAYROLL_USER', 'ADMIN']}>
+        <AppShell><PayrollConfigPage /></AppShell>
+      </RoleRoute>
+    ),
   },
   {
     path: '/payroll/dashboard',
-    element: <ProtectedRoute><AppShell><PayrollDashboardPage /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['PAYROLL_USER', 'ADMIN']}>
+        <AppShell><PayrollDashboardPage /></AppShell>
+      </RoleRoute>
+    ),
+  },
+  {
+    path: '/payroll/payruns',
+    element: (
+      <RoleRoute allowedRoles={['PAYROLL_USER', 'ADMIN']}>
+        <AppShell><PayrunListPage /></AppShell>
+      </RoleRoute>
+    ),
+  },
+  {
+    path: '/payroll/payruns/:payrunId',
+    element: (
+      <RoleRoute allowedRoles={['PAYROLL_USER', 'ADMIN']}>
+        <AppShell><PayrunDetailPage /></AppShell>
+      </RoleRoute>
+    ),
   },
   {
     path: '/users',
-    element: <ProtectedRoute><AppShell><UserManagementPage /></AppShell></ProtectedRoute>,
+    element: (
+      <RoleRoute allowedRoles={['ADMIN']}>
+        <AppShell><UserManagementPage /></AppShell>
+      </RoleRoute>
+    ),
   },
-  // Add other routes as we build them...
 ]);

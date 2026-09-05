@@ -15,7 +15,8 @@ export const EmployeeListPage = () => {
 
   const filtered = employees?.filter(emp => 
     emp.name.toLowerCase().includes(search.toLowerCase()) ||
-    emp.department.toLowerCase().includes(search.toLowerCase())
+    (emp.departmentName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (emp.jobPosition || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -87,7 +88,7 @@ export const EmployeeListPage = () => {
                     <td className="p-4 font-[Caveat] text-lg font-bold">{emp.name}</td>
                     <td className="p-4 font-[Caveat] text-lg">{emp.email}</td>
                     <td className="p-4 font-[Caveat] text-lg">{emp.jobPosition}</td>
-                    <td className="p-4 font-[Caveat] text-lg">{emp.department}</td>
+                    <td className="p-4 font-[Caveat] text-lg">{emp.departmentName || emp.department?.name}</td>
                     <td className="p-4 font-[Caveat] text-lg text-success">{emp.status}</td>
                   </tr>
                 ))}

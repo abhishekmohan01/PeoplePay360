@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useContracts } from './useContracts';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Button } from '../../components/ui/Button';
 
 export const ContractListPage = () => {
-  const { data: contracts, isLoading } = useContracts();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const employeeIdParam = searchParams.get('employeeId') || undefined;
+
+  const { data: contracts, isLoading } = useContracts(employeeIdParam);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
   const filtered = contracts?.filter(c => 
-    c.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-    c.id.toLowerCase().includes(search.toLowerCase())
+    (c.employeeName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.contractNumber || c.id || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -23,7 +26,7 @@ export const ContractListPage = () => {
       />
 
       <div className="flex items-center gap-4 mb-6">
-        <button className="bg-[#2563eb] hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold !font-handwritten text-xl transition-colors uppercase tracking-widest">
+        <button className="bg-[#2563eb] hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold !font-handwritten text-xl transition-colors uppercase tracking-widest cursor-pointer">
           New
         </button>
         <div className="w-80">
@@ -33,6 +36,17 @@ export const ContractListPage = () => {
             placeholder="Search contracts..."
           />
         </div>
+
+        {employeeIdParam && (
+          <button 
+            type="button"
+            onClick={() => setSearchParams({})}
+            className="px-4 py-1.5 border border-accent/60 bg-accent/15 text-accent rounded-lg font-[Caveat] font-bold text-lg hover:bg-accent/25 transition-colors flex items-center gap-1 cursor-pointer ml-auto"
+          >
+            <span>Filtered by Employee</span>
+            <span className="text-xs">✕ Clear</span>
+          </button>
+        )}
       </div>
 
       {isLoading && <div className="p-8 text-center font-[Caveat] text-muted text-xl">Loading contracts...</div>}
@@ -57,13 +71,13 @@ export const ContractListPage = () => {
                   onClick={() => navigate(`/contracts/${contract.id}`)}
                   className="border-b border-border hover:bg-elevated/30 transition-colors cursor-pointer"
                 >
-                  <td className="p-4 font-[Caveat] text-lg border-r border-border/50 uppercase">{contract.id}</td>
+                  <td className="p-4 font-[Caveat] text-lg border-r border-border/50 uppercase">{contract.contractNumber || contract.id}</td>
                   <td className="p-4 font-[Caveat] text-lg border-r border-border/50">{contract.employeeName}</td>
                   <td className="p-4 font-[Caveat] text-lg border-r border-border/50">{contract.startDate}</td>
                   <td className="p-4 font-[Caveat] text-lg border-r border-border/50">{contract.endDate || '—'}</td>
                   <td className="p-4 font-[Caveat] text-lg border-r border-border/50">₹{contract.salary.toLocaleString()}</td>
-                  <td className={`p-4 font-[Caveat] text-lg ${contract.status === 'Active' ? 'text-success' : 'text-error'}`}>
-                    {contract.status === 'Active' ? 'Running' : contract.status}
+                  <td className={`p-4 font-[Caveat] text-lg ${contract.status === 'RUNNING' || contract.status === 'Active' ? 'text-success' : 'text-error'}`}>
+                    {contract.status === 'RUNNING' ? 'Running' : contract.status}
                   </td>
                 </tr>
               ))}
