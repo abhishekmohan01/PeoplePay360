@@ -1,0 +1,219 @@
+import { Router } from "express";
+import { prisma } from "db/client";
+import { authenticateJWT } from "../../middleware/auth";
+import { requireRoles } from "../../middleware/rbac";
+
+export const contractRouter = Router();
+
+contractRouter.use(authenticateJWT);
+
+// GET /api/contracts
+contractRouter.get("/", async (req, res, next) => {
+  try {
+    const { companyId, employeeId, departmentId, status } = req.query;
+    const where: any = {};
+
+    if (companyId) where.companyId = String(companyId);
+    if (employeeId) where.employeeId = String(employeeId);
+    if (departmentId) where.departmentId = String(departmentId);
+    if (status) where.status = String(status);
+
+    const contracts = await prisma.contract.findMany({
+      where,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        department: { select: { id: true, name: true } },
+        salaryStructure: { select: { id: true, name: true, code: true } },
+        workingSchedule: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(contracts);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/contracts - create contract
+contractRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
+  try {
+    const {
+      companyId,
+      employeeId,
+      departmentId,
+      startDate,
+      endDate,
+      wage,
+      jobPosition,
+      contractType,
+      workingScheduleId,
+      salaryStructureId,
+      status,
+    } = req.body;
+
+    if (!companyId || !employeeId || !departmentId || !startDate || !wage || !workingScheduleId || !salaryStructureId) {
+      return res.status(400).json({ error: true, message: "Missing required contract fields" });
+    }
+
+    const contractStatus = status || "RUNNING";
+
+    // Business rule: Only one RUNNING contract per employee at a time
+    if (contractStatus === "RUNNING") {
+      const existingRunning = await prisma.contract.findFirst({
+        where: {
+          employeeId,
+          status: "RUNNING",
+        },
+      });
+
+      if (existingRunning) {
+        return res.status(400).json({
+          error: true,
+          message: `Employee already has an active RUNNING contract (${existingRunning.contractNumber}). Please terminate or expire the existing contract first.`,
+        });
+      }
+    }
+
+    // Auto-generate contract number CON/YYYY/XXXX
+    const currentYear = new Date(startDate).getFullYear();
+    const countThisYear = await prisma.contract.count({
+      where: {
+        companyId,
+        contractNumber: { startsWith: `CON/${currentYear}/` },
+      },
+    });
+    const seq = String(countThisYear + 1).padStart(4, "0");
+    const contractNumber = req.body.contractNumber || `CON/${currentYear}/${seq}`;
+
+    const contract = await prisma.contract.create({
+      data: {
+        companyId,
+        employeeId,
+        departmentId,
+        contractNumber,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        wage: Number(wage),
+        jobPosition: jobPosition || "Staff",
+        contractType: contractType || "Full-Time",
+        workingScheduleId,
+        salaryStructureId,
+        status: contractStatus,
+      },
+      include: {
+        employee: true,
+        department: true,
+        salaryStructure: true,
+        workingSchedule: true,
+      },
+    });
+
+    return res.status(201).json(contract);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/contracts/:id
+contractRouter.get("/:id", async (req, res, next) => {
+  try {
+    const contract = await prisma.contract.findUnique({
+      where: { id: req.params.id },
+      include: {
+        employee: true,
+        department: true,
+        company: true,
+        salaryStructure: {
+          include: {
+            rules: { orderBy: { sequence: "asc" } },
+          },
+        },
+        workingSchedule: {
+          include: {
+            days: { orderBy: { dayOfWeek: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (!contract) {
+      return res.status(404).json({ error: true, message: "Contract not found" });
+    }
+
+    return res.json(contract);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/contracts/:id
+contractRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      departmentId,
+      startDate,
+      endDate,
+      wage,
+      jobPosition,
+      contractType,
+      workingScheduleId,
+      salaryStructureId,
+      status,
+    } = req.body;
+
+    const current = await prisma.contract.findUnique({ where: { id } });
+    if (!current) {
+      return res.status(404).json({ error: true, message: "Contract not found" });
+    }
+
+    if (status === "RUNNING" && current.status !== "RUNNING") {
+      const activeOther = await prisma.contract.findFirst({
+        where: {
+          employeeId: current.employeeId,
+          status: "RUNNING",
+          id: { not: id },
+        },
+      });
+      if (activeOther) {
+        return res.status(400).json({
+          error: true,
+          message: `Employee already has a RUNNING contract (${activeOther.contractNumber}).`,
+        });
+      }
+    }
+
+    const updated = await prisma.contract.update({
+      where: { id },
+      data: {
+        departmentId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : undefined,
+        wage: wage !== undefined ? Number(wage) : undefined,
+        jobPosition,
+        contractType,
+        workingScheduleId,
+        salaryStructureId,
+        status,
+      },
+      include: {
+        employee: true,
+        department: true,
+        salaryStructure: true,
+        workingSchedule: true,
+      },
+    });
+
+    return res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
