@@ -1,159 +1,81 @@
-# Turborepo starter
+# PeoplePay360
 
-This Turborepo starter is maintained by the Turborepo core team.
+PeoplePay360 is a comprehensive HR and Payroll Management System designed to streamline employee management, time off tracking, attendance, and payroll processing for modern companies.
 
-## Using this example
+## Overview
 
-Run the following command:
+This project is structured as a monorepo using [Turborepo](https://turbo.build/repo), allowing us to efficiently manage both the frontend and backend applications, along with shared database schemas and configurations.
 
-```sh
-npx create-turbo@latest
-```
+### 🏢 Key Features
+- **Company & Department Management**: Organize your organization structure easily.
+- **Employee & Contract Management**: Maintain detailed employee records and manage employment contracts.
+- **Time Tracking**: Manage working schedules, daily attendances, and overtime.
+- **Time Off Management**: Handle time off allocations, requests, and multi-level approvals.
+- **Payroll Processing**: Configure dynamic salary structures and rules, run payruns, and generate PDF payslips.
 
-## What's inside?
+## Tech Stack
 
-This Turborepo includes the following packages/apps:
+The application leverages a modern, high-performance tech stack powered by [Bun](https://bun.sh/).
 
-### Apps and Packages
+### Frontend (`apps/frontend`)
+- **Framework**: React 19 + React Router DOM
+- **State Management**: Zustand
+- **Data Fetching**: React Query
+- **Styling**: Tailwind CSS
+- **Forms & Validation**: React Hook Form + Zod
+- **Charts & Icons**: Recharts & Lucide React
+- **Build Tool**: Bun
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Backend (`apps/backend`)
+- **Runtime**: Bun (Node.js compatible)
+- **Framework**: Express.js
+- **Authentication**: JWT & bcryptjs
+- **PDF Generation**: PDFKit (for Payslips)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Database (`packages/db`)
+- **ORM**: Prisma
+- **Database**: PostgreSQL
 
-### Utilities
+## Types of Users (Roles)
 
-This Turborepo has some additional tools already setup for you:
+PeoplePay360 supports role-based access control (RBAC) with the following user types:
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- **Admin**: Full system access for configuration and management.
+- **HR Manager**: Manages company structure, employees, and contracts.
+- **Time Off Admin**: Specifically handles time off policies, allocations, and requests.
+- **Payroll User**: Manages salary structures, executes payruns, and generates payslips.
+- **Employee**: Can view their own profile, submit time-off requests, and download their payslips.
 
-### Build
+## Getting Started
 
-To build all apps and packages, run the following command:
+### Prerequisites
+- [Bun](https://bun.sh/) installed on your machine
+- PostgreSQL running locally or remotely
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+### Installation
 
-```sh
-cd my-turborepo
-turbo build
-```
+1. **Install Dependencies**
+   Run the following command at the root of the repository:
+   ```sh
+   bun install
+   ```
 
-Without global `turbo`, use your package manager:
+2. **Database Setup**
+   Configure your environment variables and run Prisma migrations:
+   ```sh
+   cd packages/db
+   bunx prisma generate
+   bunx prisma db push
+   ```
 
-```sh
-cd my-turborepo
-npx turbo build
-bun exec turbo build
-bun exec turbo build
-```
+3. **Start the Development Servers**
+   From the root of the monorepo, you can start both the frontend and backend simultaneously:
+   ```sh
+   bun run dev
+   ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Structure
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- `apps/frontend`: The React frontend application.
+- `apps/backend`: The Express.js backend API.
+- `packages/db`: Shared Prisma database schema and generated client.
