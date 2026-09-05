@@ -208,7 +208,7 @@ attendanceRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) =>
 // PATCH /api/attendance/:id - manual correction
 attendanceRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { checkIn, checkOut, workedHours, overtime, status, notes } = req.body;
 
     const data: any = {

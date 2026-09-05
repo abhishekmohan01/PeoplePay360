@@ -126,7 +126,7 @@ contractRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
 contractRouter.get("/:id", async (req, res, next) => {
   try {
     const contract = await prisma.contract.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         employee: true,
         department: true,
@@ -157,7 +157,7 @@ contractRouter.get("/:id", async (req, res, next) => {
 // PATCH /api/contracts/:id
 contractRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const {
       departmentId,
       startDate,

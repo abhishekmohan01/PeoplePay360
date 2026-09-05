@@ -54,7 +54,7 @@ payslipRouter.get("/", async (req, res, next) => {
 payslipRouter.get("/:id", async (req, res, next) => {
   try {
     const payslip = await prisma.payslip.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         employee: {
           include: {
@@ -92,7 +92,7 @@ payslipRouter.get("/:id", async (req, res, next) => {
 // POST /api/payslips/:id/compute - recompute single payslip
 payslipRouter.post("/:id/compute", requireRoles("PAYROLL_USER", "HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await computePayslip(id);
 
     const updated = await prisma.payslip.findUnique({
@@ -117,7 +117,7 @@ payslipRouter.post("/:id/compute", requireRoles("PAYROLL_USER", "HR_MANAGER"), a
 payslipRouter.post("/:id/mark-paid", requireRoles("PAYROLL_USER", "HR_MANAGER"), async (req, res, next) => {
   try {
     const updated = await prisma.payslip.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: "PAID" },
     });
     return res.json({ success: true, payslip: updated });
@@ -129,7 +129,7 @@ payslipRouter.post("/:id/mark-paid", requireRoles("PAYROLL_USER", "HR_MANAGER"),
 // GET /api/payslips/:id/pdf - generate and stream PDF
 payslipRouter.get("/:id/pdf", async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const payslip = await prisma.payslip.findUnique({
       where: { id },

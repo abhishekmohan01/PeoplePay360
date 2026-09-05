@@ -75,7 +75,7 @@ companyRouter.patch("/:id", requireRoles("ADMIN"), async (req, res, next) => {
   try {
     const { name, currency, timezone, isActive } = req.body;
     const company = await prisma.company.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         name,
         currency,

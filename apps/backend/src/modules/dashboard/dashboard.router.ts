@@ -16,9 +16,9 @@ function parsePeriod(periodStr?: string) {
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     return { start, end };
   }
-  const [yearStr, monthStr] = periodStr.split("-");
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10) - 1;
+  const parts = periodStr.split("-");
+  const year = parseInt(parts[0] || "2026", 10);
+  const month = parseInt(parts[1] || "1", 10) - 1;
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0, 23, 59, 59);
   return { start, end };
@@ -141,9 +141,10 @@ dashboardRouter.get("/salary-by-department", async (req, res, next) => {
       if (!deptMap[d.id]) {
         deptMap[d.id] = { departmentName: d.name, code: d.code, totalNet: 0, totalGross: 0, count: 0 };
       }
-      deptMap[d.id].totalNet += Number(p.netSalary);
-      deptMap[d.id].totalGross += Number(p.grossSalary);
-      deptMap[d.id].count += 1;
+      const entry = deptMap[d.id]!;
+      entry.totalNet += Number(p.netSalary);
+      entry.totalGross += Number(p.grossSalary);
+      entry.count += 1;
     }
 
     return res.json(Object.values(deptMap));
@@ -255,7 +256,7 @@ dashboardRouter.get("/attendance-overview", async (req, res, next) => {
 
     for (const r of records) {
       if (counts[r.status] !== undefined) {
-        counts[r.status] += 1;
+        counts[r.status]! += 1;
       }
     }
 

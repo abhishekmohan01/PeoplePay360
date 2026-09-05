@@ -73,7 +73,7 @@ timeOffRouter.post("/types", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async
 // PATCH /api/time-off/types/:id
 timeOffRouter.patch("/types/:id", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { name, unit, requiresAllocation, approvalRequired, payrollWorkEntry, displayColor, configurationNotes, isActive } = req.body;
 
     const updated = await prisma.timeOffType.update({
@@ -163,7 +163,7 @@ timeOffRouter.post("/allocations", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"),
 // PATCH /api/time-off/allocations/:id/status
 timeOffRouter.patch("/allocations/:id/status", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body;
 
     const allocation = await prisma.timeOffAllocation.update({
@@ -289,7 +289,7 @@ timeOffRouter.post("/requests", async (req, res, next) => {
 // POST /api/time-off/requests/:id/approve - approve leave request
 timeOffRouter.post("/requests/:id/approve", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const request = await prisma.timeOffRequest.findUnique({
       where: { id },
@@ -370,7 +370,7 @@ timeOffRouter.post("/requests/:id/approve", requireRoles("TIME_OFF_ADMIN", "HR_M
 // POST /api/time-off/requests/:id/refuse - refuse leave request
 timeOffRouter.post("/requests/:id/refuse", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const request = await prisma.timeOffRequest.update({
       where: { id },
       data: {
@@ -389,7 +389,7 @@ timeOffRouter.post("/requests/:id/refuse", requireRoles("TIME_OFF_ADMIN", "HR_MA
 // POST /api/time-off/requests/:id/cancel - cancel leave request
 timeOffRouter.post("/requests/:id/cancel", async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const request = await prisma.timeOffRequest.findUnique({
       where: { id },
       include: { timeOffType: true, allocation: true },

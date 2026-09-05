@@ -7,7 +7,12 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
     return res.status(401).json({ error: true, message: "Authorization token required" });
   }
 
-  const token = authHeader.split(" ")[1];
+  const parts = authHeader.split(" ");
+  const token = parts[1];
+  if (!token) {
+    return res.status(401).json({ error: true, message: "Invalid authorization header" });
+  }
+
   const decoded = verifyJwt(token);
   if (!decoded) {
     return res.status(401).json({ error: true, message: "Invalid or expired token" });
@@ -20,10 +25,13 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
 export function optionalJWT(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split(" ")[1];
-    const decoded = verifyJwt(token);
-    if (decoded) {
-      req.user = decoded;
+    const parts = authHeader.split(" ");
+    const token = parts[1];
+    if (token) {
+      const decoded = verifyJwt(token);
+      if (decoded) {
+        req.user = decoded;
+      }
     }
   }
   next();

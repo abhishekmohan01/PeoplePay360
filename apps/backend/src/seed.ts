@@ -322,7 +322,7 @@ export async function seedDatabase() {
       });
 
       for (const rCode of u.roleCodes) {
-        const role = await prisma.role.findUnique({ where: { code: rCode } });
+        const role = await prisma.role.findUnique({ where: { code: rCode as any } });
         if (role) {
           await prisma.userRole.create({
             data: { userId: user.id, roleId: role.id },

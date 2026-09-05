@@ -32,7 +32,7 @@ workingScheduleRouter.get("/", async (req, res, next) => {
 workingScheduleRouter.get("/:id", async (req, res, next) => {
   try {
     const schedule = await prisma.workingSchedule.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         days: { orderBy: { dayOfWeek: "asc" } },
         contracts: {
@@ -93,7 +93,7 @@ workingScheduleRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, nex
 
 workingScheduleRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { name, timezone, isActive, days } = req.body;
 
     if (Array.isArray(days)) {

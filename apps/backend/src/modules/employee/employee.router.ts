@@ -120,7 +120,7 @@ employeeRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
 employeeRouter.get("/:id", async (req, res, next) => {
   try {
     const employee = await prisma.employee.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         company: true,
         department: true,
@@ -178,7 +178,7 @@ employeeRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) 
     } = req.body;
 
     const updated = await prisma.employee.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         departmentId,
         managerId: managerId !== undefined ? managerId : undefined,
@@ -209,7 +209,7 @@ employeeRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) 
 employeeRouter.get("/:id/contracts", async (req, res, next) => {
   try {
     const contracts = await prisma.contract.findMany({
-      where: { employeeId: req.params.id },
+      where: { employeeId: req.params.id as string },
       include: {
         workingSchedule: true,
         salaryStructure: true,
@@ -226,7 +226,7 @@ employeeRouter.get("/:id/contracts", async (req, res, next) => {
 employeeRouter.get("/:id/attendance", async (req, res, next) => {
   try {
     const attendances = await prisma.attendance.findMany({
-      where: { employeeId: req.params.id },
+      where: { employeeId: req.params.id as string },
       orderBy: { checkIn: "desc" },
       take: 50,
     });
@@ -239,7 +239,7 @@ employeeRouter.get("/:id/attendance", async (req, res, next) => {
 employeeRouter.get("/:id/time-off", async (req, res, next) => {
   try {
     const requests = await prisma.timeOffRequest.findMany({
-      where: { employeeId: req.params.id },
+      where: { employeeId: req.params.id as string },
       include: { timeOffType: true },
       orderBy: { startDate: "desc" },
     });
@@ -252,7 +252,7 @@ employeeRouter.get("/:id/time-off", async (req, res, next) => {
 employeeRouter.get("/:id/allocations", async (req, res, next) => {
   try {
     const allocations = await prisma.timeOffAllocation.findMany({
-      where: { employeeId: req.params.id },
+      where: { employeeId: req.params.id as string },
       include: { timeOffType: true },
       orderBy: { createdAt: "desc" },
     });
@@ -265,7 +265,7 @@ employeeRouter.get("/:id/allocations", async (req, res, next) => {
 employeeRouter.get("/:id/payslips", async (req, res, next) => {
   try {
     const payslips = await prisma.payslip.findMany({
-      where: { employeeId: req.params.id },
+      where: { employeeId: req.params.id as string },
       include: { payrun: true, salaryStructure: true },
       orderBy: { periodStart: "desc" },
     });

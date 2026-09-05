@@ -33,7 +33,7 @@ departmentRouter.get("/", async (req, res, next) => {
 departmentRouter.get("/:id", async (req, res, next) => {
   try {
     const department = await prisma.department.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         company: true,
         employees: {
@@ -92,7 +92,7 @@ departmentRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next
   try {
     const { name, code, isActive } = req.body;
     const department = await prisma.department.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { name, code, isActive },
     });
     return res.json(department);
