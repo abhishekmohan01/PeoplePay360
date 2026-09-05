@@ -40,6 +40,48 @@ button, input, select, textarea {
   font-family: var(--font-primary);
 }
 
+/* Universal Form Placeholder Clarity & Light Typography */
+::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder, #94a3b8) !important;
+  font-weight: 300 !important;
+  opacity: 0.75 !important;
+  -webkit-text-fill-color: var(--input-placeholder, #94a3b8) !important;
+  letter-spacing: 0.01em;
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: var(--input-placeholder, #94a3b8) !important;
+  font-weight: 300 !important;
+  opacity: 0.75 !important;
+  -webkit-text-fill-color: var(--input-placeholder, #94a3b8) !important;
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: var(--input-placeholder, #94a3b8) !important;
+  font-weight: 300 !important;
+  opacity: 0.75 !important;
+}
+
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+  color: var(--input-placeholder, #94a3b8) !important;
+  font-weight: 300 !important;
+  opacity: 0.75 !important;
+}
+
+:root[data-theme='dark'] ::placeholder,
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder {
+  color: #64748b !important;
+  font-weight: 300 !important;
+  opacity: 0.7 !important;
+  -webkit-text-fill-color: #64748b !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;

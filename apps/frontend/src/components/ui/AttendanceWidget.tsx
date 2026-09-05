@@ -180,9 +180,10 @@ export const AttendanceWidget: React.FC = () => {
                 type="button"
                 onClick={handleCheckOut}
                 disabled={checkOutMutation.isPending}
-                className="w-full py-2 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                className="w-full py-2 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                {checkOutMutation.isPending ? 'Checking Out...' : 'Check Out Now'}
+                {checkOutMutation.isPending && <span className="btn-spinner" />}
+                <span>{checkOutMutation.isPending ? 'Checking Out...' : 'Check Out Now'}</span>
               </button>
             </div>
           ) : (
@@ -225,13 +226,16 @@ export const AttendanceWidget: React.FC = () => {
                 type="button"
                 onClick={handleCheckIn}
                 disabled={checkInMutation.isPending || isLocating}
-                className="w-full py-2 px-3 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                className="w-full py-2 px-3 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                {isLocating
-                  ? 'Capturing Location...'
-                  : checkInMutation.isPending
-                  ? 'Checking In...'
-                  : 'Check In Now'}
+                {(checkInMutation.isPending || isLocating) && <span className="btn-spinner" />}
+                <span>
+                  {isLocating
+                    ? 'Capturing Location...'
+                    : checkInMutation.isPending
+                    ? 'Checking In...'
+                    : 'Check In Now'}
+                </span>
               </button>
             </div>
           )}

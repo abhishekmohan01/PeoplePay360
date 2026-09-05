@@ -128,17 +128,17 @@ contractRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
 
     const contract = await prisma.contract.create({
       data: {
-        companyId,
+        companyId: targetCompanyId,
         employeeId,
-        departmentId,
+        departmentId: targetDepartmentId,
         contractNumber,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         wage: Number(wage),
         jobPosition: jobPosition || "Staff",
         contractType: contractType || "Full-Time",
-        workingScheduleId,
-        salaryStructureId,
+        workingScheduleId: targetScheduleId,
+        salaryStructureId: targetStructureId,
         status: contractStatus,
       },
       include: {

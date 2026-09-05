@@ -157,10 +157,16 @@ export const PayrollDashboardPage = () => {
         {/* Department Salary Bar Chart */}
         <div className="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col h-[300px]">
           <h3 className="text-sm font-heading font-semibold text-text-primary m-0">Salary Cost by Department</h3>
-          <span className="text-xs text-text-muted mb-4">Aggregated from active contracts and department rolls</span>
+          <span className="text-xs text-text-muted mb-4">Disbursed net compensation by department (Current cycle)</span>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={salaryByDept} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-              <XAxis dataKey="department" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+            <BarChart data={salaryByDept} margin={{ top: 10, right: 10, left: -15, bottom: 20 }}>
+              <XAxis
+                dataKey="department"
+                interval={0}
+                tick={{ fontSize: 9.5, fill: 'var(--text-muted)' }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis tickFormatter={(val) => `₹${val/1000}k`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
               <Tooltip cursor={{ fill: 'var(--elevated)' }} contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--text-primary)' }} />
               <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]}>
@@ -197,7 +203,6 @@ export const PayrollDashboardPage = () => {
                 <div style={{ width: `${payslipStatus.paid}%` }} className="bg-emerald-500 h-full" title="Paid"></div>
                 <div style={{ width: `${payslipStatus.done}%` }} className="bg-primary h-full" title="Done"></div>
                 <div style={{ width: `${payslipStatus.pending}%` }} className="bg-amber-400 h-full" title="Pending"></div>
-                <div style={{ width: `${payslipStatus.warning}%` }} className="bg-red-400 h-full" title="Warning"></div>
               </div>
               <div className="flex flex-wrap justify-between text-[11px] text-text-secondary mt-1">
                 <div className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Paid ({payslipStatus.paid}%)</div>
@@ -277,7 +282,15 @@ export const PayrollDashboardPage = () => {
                   <td className="font-medium text-text-primary">{row.type}</td>
                   <td className="text-text-secondary text-sm">{row.approvedDays}d</td>
                   <td className="text-amber-500 text-sm">{row.pending}d</td>
-                  <td className="font-semibold text-emerald-500 text-sm">{row.remainingBalance}d</td>
+                  <td className="font-semibold text-emerald-500 text-sm">
+                    {typeof row.remainingBalance === 'number'
+                      ? `${row.remainingBalance}d`
+                      : String(row.remainingBalance).endsWith('d') || String(row.remainingBalance).endsWith('days')
+                      ? row.remainingBalance
+                      : row.remainingBalance === 'Available'
+                      ? 'Available'
+                      : `${row.remainingBalance}d`}
+                  </td>
                 </tr>
               ))}
             </tbody>

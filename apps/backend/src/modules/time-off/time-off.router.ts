@@ -16,8 +16,15 @@ timeOffRouter.get("/types", async (req, res, next) => {
   try {
     const { companyId, isActive } = req.query;
     const where: any = {};
-    if (companyId) where.companyId = String(companyId);
+    const targetCompanyId = companyId ? String(companyId) : req.user?.companyId;
+    if (targetCompanyId) where.companyId = targetCompanyId;
     if (isActive !== undefined) where.isActive = isActive === "true";
+
+    // Self-healing update: ensure Sick Leave aligns with context.md (requiresAllocation: false)
+    await prisma.timeOffType.updateMany({
+      where: { name: "Sick Leave", requiresAllocation: true },
+      data: { requiresAllocation: false },
+    });
 
     const types = await prisma.timeOffType.findMany({
       where,
@@ -47,14 +54,16 @@ timeOffRouter.post("/types", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async
       configurationNotes,
     } = req.body;
 
-    if (!companyId || !name || !unit) {
+    const targetCompanyId = companyId || req.user?.companyId;
+
+    if (!targetCompanyId || !name || !unit) {
       return res.status(400).json({ error: true, message: "companyId, name, and unit are required" });
     }
 
     const created = await prisma.timeOffType.create({
       data: {
-        companyId,
-        name,
+        companyId: targetCompanyId,
+        name: name.trim(),
         unit,
         requiresAllocation: requiresAllocation !== undefined ? requiresAllocation : true,
         approvalRequired: approvalRequired !== undefined ? approvalRequired : true,
@@ -79,7 +88,7 @@ timeOffRouter.patch("/types/:id", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), 
     const updated = await prisma.timeOffType.update({
       where: { id },
       data: {
-        name,
+        name: name ? name.trim() : undefined,
         unit,
         requiresAllocation,
         approvalRequired,
@@ -105,7 +114,21 @@ timeOffRouter.get("/allocations", async (req, res, next) => {
   try {
     const { employeeId, timeOffTypeId, status } = req.query;
     const where: any = {};
-    if (employeeId) where.employeeId = String(employeeId);
+
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
+
+    if (!isPrivileged) {
+      // Non-privileged users (e.g. regular EMPLOYEE) can strictly only see their own allocations
+      if (req.user?.employeeId) {
+        where.employeeId = req.user.employeeId;
+      } else {
+        return res.json([]);
+      }
+    } else if (employeeId) {
+      where.employeeId = String(employeeId);
+    }
+
     if (timeOffTypeId) where.timeOffTypeId = String(timeOffTypeId);
     if (status) where.status = String(status);
 
@@ -145,7 +168,7 @@ timeOffRouter.post("/allocations", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"),
         validityStart: new Date(validityStart),
         validityEnd: validityEnd ? new Date(validityEnd) : null,
         description,
-        status: "CONFIRMED", // Auto-confirm when admin assigns, or keep draft
+        status: "CONFIRMED",
         approverId: req.user?.id,
       },
       include: {
@@ -191,13 +214,27 @@ timeOffRouter.get("/requests", async (req, res, next) => {
     const { employeeId, status, myTeam } = req.query;
     const where: any = {};
 
-    if (employeeId) where.employeeId = String(employeeId);
-    if (status) where.status = String(status);
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
 
-    if (myTeam === "true" && req.user?.employeeId) {
-      // Find employees reporting to current user's employee
-      where.employee = { managerId: req.user.employeeId };
+    if (!isPrivileged) {
+      if (myTeam === "true" && req.user?.employeeId) {
+        // Manager viewing team requests
+        where.employee = { managerId: req.user.employeeId };
+      } else if (req.user?.employeeId) {
+        // Employee viewing their own requests
+        where.employeeId = req.user.employeeId;
+      } else {
+        return res.json([]);
+      }
+    } else {
+      if (employeeId) where.employeeId = String(employeeId);
+      if (myTeam === "true" && req.user?.employeeId) {
+        where.employee = { managerId: req.user.employeeId };
+      }
     }
+
+    if (status) where.status = String(status);
 
     const requests = await prisma.timeOffRequest.findMany({
       where,
@@ -209,6 +246,7 @@ timeOffRouter.get("/requests", async (req, res, next) => {
             lastName: true,
             employeeCode: true,
             department: { select: { name: true } },
+            managerId: true,
           },
         },
         timeOffType: true,
@@ -229,7 +267,15 @@ timeOffRouter.post("/requests", async (req, res, next) => {
   try {
     const { employeeId, timeOffTypeId, startDate, endDate, duration, reason } = req.body;
 
-    const targetEmployeeId = employeeId || req.user?.employeeId;
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
+
+    // Regular employee can strictly only submit leave requests for themselves
+    let targetEmployeeId = req.user?.employeeId;
+    if (isPrivileged && employeeId) {
+      targetEmployeeId = employeeId;
+    }
+
     if (!targetEmployeeId || !timeOffTypeId || !startDate || !endDate || duration === undefined) {
       return res.status(400).json({ error: true, message: "Missing required request fields" });
     }
@@ -240,6 +286,9 @@ timeOffRouter.post("/requests", async (req, res, next) => {
     }
 
     const dur = Number(duration);
+    if (isNaN(dur) || dur <= 0) {
+      return res.status(400).json({ error: true, message: "Duration must be greater than 0" });
+    }
 
     // If type requires allocation, check available balance
     let allocationId: string | null = null;
@@ -287,13 +336,13 @@ timeOffRouter.post("/requests", async (req, res, next) => {
 });
 
 // POST /api/time-off/requests/:id/approve - approve leave request
-timeOffRouter.post("/requests/:id/approve", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
+timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
   try {
     const id = req.params.id as string;
 
     const request = await prisma.timeOffRequest.findUnique({
       where: { id },
-      include: { timeOffType: true, allocation: true },
+      include: { timeOffType: true, allocation: true, employee: true },
     });
 
     if (!request) {
@@ -302,6 +351,14 @@ timeOffRouter.post("/requests/:id/approve", requireRoles("TIME_OFF_ADMIN", "HR_M
 
     if (request.status === "APPROVED") {
       return res.status(400).json({ error: true, message: "Request is already approved" });
+    }
+
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
+    const isManager = req.user?.employeeId && request.employee?.managerId === req.user.employeeId;
+
+    if (!isPrivileged && !isManager) {
+      return res.status(403).json({ error: true, message: "Forbidden: Not authorized to approve this leave request" });
     }
 
     const dur = Number(request.duration);
@@ -368,10 +425,28 @@ timeOffRouter.post("/requests/:id/approve", requireRoles("TIME_OFF_ADMIN", "HR_M
 });
 
 // POST /api/time-off/requests/:id/refuse - refuse leave request
-timeOffRouter.post("/requests/:id/refuse", requireRoles("TIME_OFF_ADMIN", "HR_MANAGER"), async (req, res, next) => {
+timeOffRouter.post("/requests/:id/refuse", async (req, res, next) => {
   try {
     const id = req.params.id as string;
-    const request = await prisma.timeOffRequest.update({
+
+    const request = await prisma.timeOffRequest.findUnique({
+      where: { id },
+      include: { employee: true },
+    });
+
+    if (!request) {
+      return res.status(404).json({ error: true, message: "Leave request not found" });
+    }
+
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
+    const isManager = req.user?.employeeId && request.employee?.managerId === req.user.employeeId;
+
+    if (!isPrivileged && !isManager) {
+      return res.status(403).json({ error: true, message: "Forbidden: Not authorized to refuse this leave request" });
+    }
+
+    const updated = await prisma.timeOffRequest.update({
       where: { id },
       data: {
         status: "REFUSED",
@@ -380,7 +455,7 @@ timeOffRouter.post("/requests/:id/refuse", requireRoles("TIME_OFF_ADMIN", "HR_MA
       include: { employee: true, timeOffType: true },
     });
 
-    return res.json({ success: true, request });
+    return res.json({ success: true, request: updated });
   } catch (err) {
     next(err);
   }
@@ -397,6 +472,14 @@ timeOffRouter.post("/requests/:id/cancel", async (req, res, next) => {
 
     if (!request) {
       return res.status(404).json({ error: true, message: "Request not found" });
+    }
+
+    const userRoles = req.user?.roles || [];
+    const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
+    const isOwner = req.user?.employeeId && request.employeeId === req.user.employeeId;
+
+    if (!isPrivileged && !isOwner) {
+      return res.status(403).json({ error: true, message: "Forbidden: You can only cancel your own leave requests" });
     }
 
     // Restore allocation if it was approved and deducted

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { useCreateSchedule, useUpdateSchedule } from './useSchedules';
 import { type Schedule } from '../../api/schedules';
-import { X, Calendar, AlertCircle, Clock, Globe } from 'lucide-react';
+import { X, AlertCircle, Clock, Globe } from 'lucide-react';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -20,6 +20,19 @@ const DAY_NAMES = [
   { id: 7, label: 'Sunday' },
 ];
 
+/** Compute net working hours from shift start, end, and break minutes */
+function computeHoursFromTimes(start: string, end: string, breakMins: number): number {
+  const partsS = start.split(':');
+  const partsE = end.split(':');
+  const sh = Number(partsS[0]);
+  const sm = Number(partsS[1] ?? 0);
+  const eh = Number(partsE[0]);
+  const em = Number(partsE[1] ?? 0);
+  if (isNaN(sh) || isNaN(eh) || isNaN(sm) || isNaN(em)) return 0;
+  const workMins = (eh * 60 + em) - (sh * 60 + sm) - breakMins;
+  return Math.max(0, Math.round((workMins / 60) * 10) / 10);
+}
+
 export const ScheduleModal: React.FC<ScheduleModalProps> = ({
   isOpen,
   onClose,
@@ -33,33 +46,51 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
   const [breakMinutes, setBreakMinutes] = useState('60');
-  const [hoursPerDay, setHoursPerDay] = useState('8');
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      if (scheduleToEdit) {
-        setName(scheduleToEdit.name);
-        setTimezone(scheduleToEdit.timezone || 'Asia/Kolkata');
-        setSelectedDays([1, 2, 3, 4, 5]);
-        setHoursPerDay(String(Math.round((scheduleToEdit.hoursPerWeek / 5) * 10) / 10 || 8));
+    if (!isOpen) return;
+    setFormError(null);
+
+    if (scheduleToEdit) {
+      setName(scheduleToEdit.name);
+      setTimezone(scheduleToEdit.timezone || 'Asia/Kolkata');
+
+      if (scheduleToEdit.days && scheduleToEdit.days.length > 0) {
+        // Restore actual saved working days
+        setSelectedDays(scheduleToEdit.days.map((d) => d.dayOfWeek).sort((a, b) => a - b));
+        // Use first day's times as the uniform shift pattern
+        const first = scheduleToEdit.days[0]!;
+        setStartTime(first.startTime.slice(0, 5));
+        setEndTime(first.endTime.slice(0, 5));
+        setBreakMinutes(String(first.breakMinutes ?? 60));
       } else {
-        setName('Standard 40h Working Schedule');
-        setTimezone('Asia/Kolkata');
+        setSelectedDays([1, 2, 3, 4, 5]);
         setStartTime('09:00');
         setEndTime('18:00');
         setBreakMinutes('60');
-        setHoursPerDay('8');
-        setSelectedDays([1, 2, 3, 4, 5]);
       }
-      setFormError(null);
+    } else {
+      // Create mode defaults
+      setName('');
+      setTimezone('Asia/Kolkata');
+      setStartTime('09:00');
+      setEndTime('18:00');
+      setBreakMinutes('60');
+      setSelectedDays([1, 2, 3, 4, 5]);
     }
   }, [isOpen, scheduleToEdit]);
 
   if (!isOpen) return null;
 
+  // Derived: live-computed hours based on current inputs
+  const hoursPerDay = computeHoursFromTimes(startTime, endTime, Number(breakMinutes) || 0);
+  const totalWeeklyHours = Math.round(selectedDays.length * hoursPerDay * 10) / 10;
+  const isInvalidShift = hoursPerDay <= 0;
+
   const toggleDay = (dayId: number) => {
+    setFormError(null);
     if (selectedDays.includes(dayId)) {
       if (selectedDays.length <= 1) {
         setFormError('Schedule must have at least one active working day.');
@@ -67,7 +98,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
       }
       setSelectedDays(selectedDays.filter((d) => d !== dayId));
     } else {
-      setSelectedDays([...selectedDays, dayId].sort());
+      setSelectedDays([...selectedDays, dayId].sort((a, b) => a - b));
     }
   };
 
@@ -86,24 +117,44 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
       return;
     }
 
-    const dailyH = Number(hoursPerDay) || 8;
+    // Validate end time is after start time
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const startMins = (sh ?? 0) * 60 + (sm ?? 0);
+    const endMins = (eh ?? 0) * 60 + (em ?? 0);
+    if (endMins <= startMins) {
+      setFormError('Shift end time must be after the start time.');
+      return;
+    }
+
+    // Validate break does not exceed shift duration
+    const shiftDurationMins = endMins - startMins;
+    const breakMins = Number(breakMinutes) || 0;
+    if (breakMins >= shiftDurationMins) {
+      setFormError(
+        `Break duration (${breakMins} min) cannot equal or exceed the shift length (${shiftDurationMins} min).`
+      );
+      return;
+    }
+
+    if (hoursPerDay <= 0) {
+      setFormError('Net working hours per day must be greater than 0. Adjust shift times or break duration.');
+      return;
+    }
+
     const daysPayload = selectedDays.map((dayOfWeek) => ({
       dayOfWeek,
       startTime: `${startTime}:00`,
       endTime: `${endTime}:00`,
-      breakMinutes: Number(breakMinutes) || 60,
-      hours: dailyH,
+      breakMinutes: breakMins,
+      hours: hoursPerDay,
     }));
 
     try {
       if (scheduleToEdit) {
         await updateMutation.mutateAsync({
           id: scheduleToEdit.id,
-          data: {
-            name: name.trim(),
-            timezone,
-            days: daysPayload,
-          },
+          data: { name: name.trim(), timezone, days: daysPayload },
         });
       } else {
         await createMutation.mutateAsync({
@@ -118,11 +169,9 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
     }
   };
 
-  const calculatedTotalHours = selectedDays.length * (Number(hoursPerDay) || 8);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
+      <div
         className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
@@ -193,7 +242,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
             </select>
           </div>
 
-          {/* Timings */}
+          {/* Shift Timings */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-text-secondary mb-1.5">
@@ -202,7 +251,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
               <input
                 type="time"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(e) => { setStartTime(e.target.value); setFormError(null); }}
                 className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
                 required
               />
@@ -215,8 +264,10 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
               <input
                 type="time"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
+                onChange={(e) => { setEndTime(e.target.value); setFormError(null); }}
+                className={`w-full px-3 py-2 text-sm bg-surface border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 transition-all ${
+                  isInvalidShift ? 'border-rose-400 focus:ring-rose-400' : 'border-border focus:ring-primary'
+                }`}
                 required
               />
             </div>
@@ -228,23 +279,36 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
               <input
                 type="number"
                 min="0"
-                max="180"
-                step="15"
+                max="360"
+                step="5"
                 value={breakMinutes}
-                onChange={(e) => setBreakMinutes(e.target.value)}
+                onChange={(e) => { setBreakMinutes(e.target.value); setFormError(null); }}
                 className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
           </div>
 
+          {/* Live Hours Preview */}
+          <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs border transition-colors ${
+            isInvalidShift
+              ? 'bg-rose-500/5 border-rose-500/20'
+              : 'bg-primary/5 border-primary/20'
+          }`}>
+            <Clock size={13} className={isInvalidShift ? 'text-rose-500' : 'text-primary'} />
+            <span className="text-text-muted">Net hours per day (auto-calculated):</span>
+            <span className={`font-bold ml-auto ${isInvalidShift ? 'text-rose-500' : 'text-primary'}`}>
+              {isInvalidShift ? 'Invalid — check shift times' : `${hoursPerDay}h`}
+            </span>
+          </div>
+
           {/* Working Days */}
           <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-2 flex items-center justify-between">
-              <span>Working Days</span>
-              <span className="text-primary font-semibold">
-                {selectedDays.length} Days • {calculatedTotalHours}h / week
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-text-secondary">Working Days</label>
+              <span className={`text-xs font-semibold ${isInvalidShift ? 'text-rose-500' : 'text-primary'}`}>
+                {selectedDays.length} Days • {isInvalidShift ? '—' : `${totalWeeklyHours}h / week`}
               </span>
-            </label>
+            </div>
             <div className="flex flex-wrap gap-2">
               {DAY_NAMES.map((day) => {
                 const isSelected = selectedDays.includes(day.id);
@@ -266,23 +330,12 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
             </div>
           </div>
 
-          {/* Footer Actions */}
+          {/* Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border mt-auto">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isPending}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={isPending}
-            >
+            <Button type="submit" variant="primary" size="sm" disabled={isPending || isInvalidShift} isLoading={isPending}>
               {isPending ? 'Saving...' : scheduleToEdit ? 'Save Changes' : 'Create Schedule'}
             </Button>
           </div>

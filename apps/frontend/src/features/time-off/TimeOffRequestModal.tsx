@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { EmployeeSearchSelect } from '../../components/ui/EmployeeSearchSelect';
-import { useTimeOffTypes, useCreateTimeOffRequest } from './useTimeOff';
+import { useTimeOffTypes, useCreateTimeOffRequest, useTimeOffAllocations } from './useTimeOff';
 import { useAuthStore } from '../../stores/auth.store';
-import { X, CalendarRange, AlertCircle, Info, Umbrella } from 'lucide-react';
+import { X, CalendarRange, AlertCircle, Info, Umbrella, CheckCircle2 } from 'lucide-react';
 
 interface TimeOffRequestModalProps {
   isOpen: boolean;
@@ -29,6 +29,15 @@ export const TimeOffRequestModal: React.FC<TimeOffRequestModalProps> = ({
   const [duration, setDuration] = useState('1');
   const [reason, setReason] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  const targetEmpId = employeeId || user?.employeeId;
+  const { data: allocations } = useTimeOffAllocations(
+    targetEmpId ? { employeeId: targetEmpId } : undefined
+  );
+  const selectedType = timeOffTypes?.find((t) => t.id === timeOffTypeId);
+  const currentAlloc = allocations?.find(
+    (a) => (a.timeOffTypeId && a.timeOffTypeId === timeOffTypeId) || a.timeOffTypeName === selectedType?.name
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -83,6 +92,15 @@ export const TimeOffRequestModal: React.FC<TimeOffRequestModalProps> = ({
       return;
     }
 
+    if (selectedType?.requiresAllocation) {
+      if (!currentAlloc || currentAlloc.remaining < days) {
+        setFormError(
+          `Insufficient leave balance for ${selectedType.name}. Available: ${currentAlloc?.remaining ?? 0} days, Requested: ${days} days.`
+        );
+        return;
+      }
+    }
+
     createMutation.mutate(
       {
         employeeId,
@@ -102,8 +120,6 @@ export const TimeOffRequestModal: React.FC<TimeOffRequestModalProps> = ({
       }
     );
   };
-
-  const selectedType = timeOffTypes?.find((t) => t.id === timeOffTypeId);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
@@ -174,16 +190,45 @@ export const TimeOffRequestModal: React.FC<TimeOffRequestModalProps> = ({
               </label>
               <select
                 value={timeOffTypeId}
-                onChange={(e) => setTimeOffTypeId(e.target.value)}
+                onChange={(e) => { setTimeOffTypeId(e.target.value); setFormError(null); }}
                 className="border border-border bg-surface text-text-primary p-2.5 rounded-lg text-sm outline-none focus:border-primary cursor-pointer transition-colors"
                 required
               >
                 {timeOffTypes?.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name} {t.requiresAllocation ? '(Requires Allocation)' : '(Auto-Approved)'}
+                    {t.name} {t.requiresAllocation ? '(Requires Allocation)' : '(No Quota Required)'}
                   </option>
                 ))}
               </select>
+
+              {/* Live Balance / Policy Indicator */}
+              {selectedType && (
+                <div className="mt-0.5">
+                  {selectedType.requiresAllocation ? (
+                    currentAlloc ? (
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        <CheckCircle2 size={13} className="shrink-0" />
+                        <span>
+                          Available Balance: <strong>{currentAlloc.remaining} {currentAlloc.unit.toLowerCase()}</strong> remaining (of {currentAlloc.allocated} allocated)
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        <AlertCircle size={13} className="shrink-0" />
+                        <span>
+                          No quota currently allocated for {selectedType.name} (0 days remaining). Please contact HR.
+                        </span>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium">
+                      <Info size={13} className="shrink-0 text-primary" />
+                      <span>No pre-allocated quota required for this leave type (subject to manager approval).</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {selectedType?.configurationNotes && (
                 <span className="text-[11px] text-text-muted">
                   {selectedType.configurationNotes}
@@ -274,6 +319,7 @@ export const TimeOffRequestModal: React.FC<TimeOffRequestModalProps> = ({
               variant="primary"
               size="sm"
               disabled={createMutation.isPending}
+              isLoading={createMutation.isPending}
             >
               {createMutation.isPending ? 'Submitting...' : 'Submit Request'}
             </Button>

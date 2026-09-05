@@ -188,10 +188,12 @@ export async function getComprehensiveDashboardData(filters?: DashboardFilters):
   // 5. Process Alerts
   const alerts: PayrollAlert[] = [];
   if (k.activeWarningsCount > 0) {
-    alerts.push({ id: 'w-1', message: `${k.activeWarningsCount} unresolved payroll warnings in period` });
+    const warningNoun = k.activeWarningsCount === 1 ? 'warning' : 'warnings';
+    alerts.push({ id: 'w-1', message: `${k.activeWarningsCount} unresolved payroll ${warningNoun} in period` });
   }
   if (dist.withWarnings > 0) {
-    alerts.push({ id: 'w-2', message: `${dist.withWarnings} payslips flagged with calculation warnings` });
+    const payslipNoun = dist.withWarnings === 1 ? 'payslip' : 'payslips';
+    alerts.push({ id: 'w-2', message: `${dist.withWarnings} ${payslipNoun} flagged with calculation warnings` });
   }
   if (alerts.length === 0) {
     alerts.push({ id: 'info-1', message: 'All current payroll rules and payruns validated cleanly.' });
@@ -411,3 +413,22 @@ export async function getPayslip(id: string): Promise<PayslipSummary> {
     })),
   };
 }
+
+export async function downloadPayslipPdf(payslipId: string, fileName?: string): Promise<void> {
+  const blob = await apiClient.getBlob(`/payslips/${payslipId}/pdf`);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName || `Payslip_${payslipId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+}
+
+export async function viewPayslipPdf(payslipId: string): Promise<void> {
+  const blob = await apiClient.getBlob(`/payslips/${payslipId}/pdf`);
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+

@@ -70,6 +70,7 @@ export interface TimeOffAllocation {
   id: string;
   employeeId: string;
   employeeName: string;
+  timeOffTypeId?: string;
   timeOffTypeName: string;
   allocated: number;
   taken: number;

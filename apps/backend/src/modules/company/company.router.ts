@@ -60,7 +60,7 @@ companyRouter.post("/", requireRoles("ADMIN"), async (req, res, next) => {
     const company = await prisma.company.create({
       data: {
         name,
-        currency: currency || "USD",
+        currency: currency || "INR",
         timezone: timezone || "UTC",
       },
     });

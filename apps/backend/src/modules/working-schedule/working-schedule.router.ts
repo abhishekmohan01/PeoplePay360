@@ -11,14 +11,15 @@ workingScheduleRouter.get("/", async (req, res, next) => {
   try {
     const { companyId, isActive } = req.query;
     const where: any = {};
-    if (companyId) where.companyId = String(companyId);
+    const targetCompanyId = companyId ? String(companyId) : req.user?.companyId;
+    if (targetCompanyId) where.companyId = targetCompanyId;
     if (isActive !== undefined) where.isActive = isActive === "true";
 
     const schedules = await prisma.workingSchedule.findMany({
       where,
       include: {
         days: { orderBy: { dayOfWeek: "asc" } },
-        _count: { select: { contracts: true } },
+        _count: { select: { contracts: { where: { status: 'RUNNING', employee: { status: 'ACTIVE' } } } } },
       },
       orderBy: { name: "asc" },
     });
@@ -36,6 +37,7 @@ workingScheduleRouter.get("/:id", async (req, res, next) => {
       include: {
         days: { orderBy: { dayOfWeek: "asc" } },
         contracts: {
+          where: { status: 'RUNNING', employee: { status: 'ACTIVE' } },
           select: { id: true, contractNumber: true, employee: { select: { firstName: true, lastName: true } } },
         },
       },
@@ -55,14 +57,17 @@ workingScheduleRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, nex
   try {
     let { companyId, name, timezone, days } = req.body;
 
-    if (!companyId) {
+    let targetCompanyId = companyId || req.user?.companyId;
+    if (!targetCompanyId) {
       const comp = await prisma.company.findFirst();
-      companyId = comp?.id;
+      targetCompanyId = comp?.id;
     }
 
-    if (!companyId || !name) {
+    if (!targetCompanyId || !name || !name.trim()) {
       return res.status(400).json({ error: true, message: "companyId and name are required" });
     }
+
+    const trimmedName = name.trim();
 
     const daysList: any[] = Array.isArray(days) && days.length > 0 ? days : [
       { dayOfWeek: 1, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
@@ -76,8 +81,8 @@ workingScheduleRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, nex
 
     const schedule = await prisma.workingSchedule.create({
       data: {
-        companyId,
-        name,
+        companyId: targetCompanyId,
+        name: trimmedName,
         timezone: timezone || "UTC",
         daysPerWeek: totalDays,
         hoursPerWeek: totalHours,
@@ -93,11 +98,18 @@ workingScheduleRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, nex
       },
       include: {
         days: { orderBy: { dayOfWeek: "asc" } },
+        _count: { select: { contracts: { where: { status: 'RUNNING', employee: { status: 'ACTIVE' } } } } },
       },
     });
 
     return res.status(201).json(schedule);
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({
+        error: true,
+        message: `A schedule named "${req.body.name}" already exists for this company.`,
+      });
+    }
     next(err);
   }
 });
@@ -106,6 +118,8 @@ workingScheduleRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res,
   try {
     const id = req.params.id as string;
     const { name, timezone, isActive, days } = req.body;
+
+    const trimmedName = name ? name.trim() : undefined;
 
     if (Array.isArray(days)) {
       const totalHours = days.reduce((sum, d) => sum + (Number(d.hours) || 0), 0);
@@ -128,7 +142,7 @@ workingScheduleRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res,
         await tx.workingSchedule.update({
           where: { id },
           data: {
-            name,
+            name: trimmedName,
             timezone,
             isActive,
             daysPerWeek: totalDays,
@@ -139,17 +153,26 @@ workingScheduleRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res,
     } else {
       await prisma.workingSchedule.update({
         where: { id },
-        data: { name, timezone, isActive },
+        data: { name: trimmedName, timezone, isActive },
       });
     }
 
     const updated = await prisma.workingSchedule.findUnique({
       where: { id },
-      include: { days: { orderBy: { dayOfWeek: "asc" } } },
+      include: {
+        days: { orderBy: { dayOfWeek: "asc" } },
+        _count: { select: { contracts: { where: { status: 'RUNNING', employee: { status: 'ACTIVE' } } } } },
+      },
     });
 
     return res.json(updated);
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({
+        error: true,
+        message: `A schedule named "${req.body.name}" already exists for this company.`,
+      });
+    }
     next(err);
   }
 });

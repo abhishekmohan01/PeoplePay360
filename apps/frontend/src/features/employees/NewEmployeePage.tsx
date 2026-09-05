@@ -41,7 +41,7 @@ export const NewEmployeePage: React.FC = () => {
 
   useEffect(() => {
     if (departments && departments.length > 0 && !departmentId) {
-      setDepartmentId(departments[0].id);
+      setDepartmentId(departments[0]?.id || '');
     }
   }, [departments, departmentId]);
 
@@ -344,7 +344,7 @@ export const NewEmployeePage: React.FC = () => {
           <Button type="button" variant="outline" onClick={() => navigate('/employees')} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={isPending}>
+          <Button type="submit" variant="primary" disabled={isPending} isLoading={isPending}>
             {isPending ? 'Saving Record...' : 'Create Employee Profile'}
           </Button>
         </div>

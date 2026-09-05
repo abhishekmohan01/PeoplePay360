@@ -353,7 +353,7 @@ export const UserModal: React.FC<UserModalProps> = ({ user, onClose, defaultEmpl
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" disabled={isPending}>
+            <Button type="submit" variant="primary" size="sm" isLoading={isPending} disabled={isPending}>
               {isPending 
                 ? (isEditing ? 'Saving Access...' : 'Creating User...') 
                 : 'Create User / Save Access'}

@@ -194,10 +194,10 @@ export const PayrunListPage: React.FC = () => {
                         {p.name}
                       </span>
                     </td>
-                    <td className="text-xs text-text-secondary">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar size={13} className="text-text-muted" />
-                        <span>{p.periodStart} ➔ {p.periodEnd}</span>
+                    <td className="text-xs text-text-secondary whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <Calendar size={13} className="text-text-muted shrink-0" />
+                        <span className="whitespace-nowrap">{p.periodStart} ➔ {p.periodEnd}</span>
                       </div>
                     </td>
                     <td className="text-xs text-text-secondary font-medium">

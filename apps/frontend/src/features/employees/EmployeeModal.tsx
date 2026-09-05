@@ -96,7 +96,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, e
   // Set default department when departments load
   useEffect(() => {
     if (departments && departments.length > 0 && !departmentId && !isEditing) {
-      setDepartmentId(departments[0].id);
+      setDepartmentId(departments[0]?.id || '');
     }
   }, [departments, departmentId, isEditing]);
 
@@ -454,7 +454,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, e
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" disabled={isPending}>
+            <Button type="submit" variant="primary" size="sm" disabled={isPending} isLoading={isPending}>
               {isPending ? 'Saving Record...' : isEditing ? 'Save Changes' : 'Create Employee'}
             </Button>
           </div>

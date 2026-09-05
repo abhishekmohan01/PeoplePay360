@@ -20,8 +20,12 @@ import {
   X,
   Users,
   Calendar,
+  Download,
+  ExternalLink,
+  TrendingUp,
+  Minus,
 } from 'lucide-react';
-import type { PayslipSummary } from '../../api/payroll';
+import { downloadPayslipPdf, viewPayslipPdf, type PayslipSummary } from '../../api/payroll';
 
 export const PayrunDetailPage: React.FC = () => {
   const { payrunId } = useParams<{ payrunId: string }>();
@@ -34,6 +38,26 @@ export const PayrunDetailPage: React.FC = () => {
 
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipSummary | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async (payslipId: string, employeeCode?: string) => {
+    try {
+      setIsDownloadingPdf(true);
+      await downloadPayslipPdf(payslipId, `Payslip_${employeeCode || 'Employee'}_${payrun?.periodStart || 'payrun'}.pdf`);
+    } catch (err: any) {
+      setFeedback(`Failed to download PDF: ${err?.message || 'Server error'}`);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handleViewPdf = async (payslipId: string) => {
+    try {
+      await viewPayslipPdf(payslipId);
+    } catch (err: any) {
+      setFeedback(`Failed to open PDF: ${err?.message || 'Server error'}`);
+    }
+  };
 
   const canAccessPayroll = useAuthStore((state) => state.canAccessPayroll)();
 
@@ -107,8 +131,9 @@ export const PayrunDetailPage: React.FC = () => {
                 variant="primary"
                 onClick={handleCompute}
                 disabled={computeMutation.isPending}
+                isLoading={computeMutation.isPending}
               >
-                <Calculator size={15} />
+                {!computeMutation.isPending && <Calculator size={15} />}
                 <span>{computeMutation.isPending ? 'Computing...' : 'Compute Payslips'}</span>
               </Button>
             )}
@@ -120,6 +145,7 @@ export const PayrunDetailPage: React.FC = () => {
                   size="sm"
                   onClick={handleCompute}
                   disabled={computeMutation.isPending}
+                  isLoading={computeMutation.isPending}
                 >
                   Recompute
                 </Button>
@@ -127,9 +153,10 @@ export const PayrunDetailPage: React.FC = () => {
                   variant="primary"
                   onClick={handleValidate}
                   disabled={validateMutation.isPending}
+                  isLoading={validateMutation.isPending}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  <CheckCircle2 size={15} />
+                  {!validateMutation.isPending && <CheckCircle2 size={15} />}
                   <span>{validateMutation.isPending ? 'Validating...' : 'Validate Payrun'}</span>
                 </Button>
               </>
@@ -141,8 +168,9 @@ export const PayrunDetailPage: React.FC = () => {
                   variant="primary"
                   onClick={handleMarkPaid}
                   disabled={markPaidMutation.isPending}
+                  isLoading={markPaidMutation.isPending}
                 >
-                  <DollarSign size={15} />
+                  {!markPaidMutation.isPending && <DollarSign size={15} />}
                   <span>{markPaidMutation.isPending ? 'Processing...' : 'Mark as Paid'}</span>
                 </Button>
                 <Button
@@ -173,7 +201,7 @@ export const PayrunDetailPage: React.FC = () => {
       )}
 
       {/* Summary KPI Counters (Interactive) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div 
           onClick={() => document.getElementById('payslips-table')?.scrollIntoView({ behavior: 'smooth' })}
           className="bg-surface border border-border hover:border-primary/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
@@ -202,6 +230,23 @@ export const PayrunDetailPage: React.FC = () => {
           </span>
           <span className="text-[11px] text-text-muted mt-1 block truncate">
             Before deductions & taxes ➔
+          </span>
+        </div>
+
+        <div 
+          onClick={() => navigate('/payroll/dashboard')}
+          className="bg-surface border border-border hover:border-rose-500/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
+          title="Click to view deduction analytics"
+        >
+          <span className="text-text-muted text-xs block font-medium uppercase tracking-wider">Total Deductions</span>
+          <span className="text-2xl font-heading font-bold text-rose-500 mt-1 block">
+            -₹
+            {(
+              payrun.payslips?.reduce((sum, p) => sum + (p.totalDeductions || (p.grossSalary - p.netSalary)), 0) || 0
+            ).toLocaleString()}
+          </span>
+          <span className="text-[11px] text-text-muted mt-1 block truncate">
+            PF, taxes & withholdings ➔
           </span>
         </div>
 
@@ -258,46 +303,63 @@ export const PayrunDetailPage: React.FC = () => {
               <th>Department</th>
               <th className="text-right">Basic Wage</th>
               <th className="text-right">Gross Salary</th>
+              <th className="text-right">Deductions</th>
               <th className="text-right">Net Payable</th>
               <th className="text-center">Action</th>
             </tr>
           </thead>
           <tbody>
             {payrun.payslips && payrun.payslips.length > 0 ? (
-              payrun.payslips.map((ps) => (
-                <tr key={ps.id}>
-                  <td>
-                    <div className="font-semibold text-text-primary">{ps.employeeName}</div>
-                    <span className="text-[10px] text-text-muted uppercase">
-                      {ps.employeeCode || ps.jobPosition}
-                    </span>
-                  </td>
-                  <td className="text-xs text-text-secondary">
-                    {ps.departmentName}
-                  </td>
-                  <td className="text-sm text-right tabular-nums text-text-secondary">
-                    ₹{ps.basicSalary.toLocaleString()}
-                  </td>
-                  <td className="text-sm text-right tabular-nums font-medium text-text-primary">
-                    ₹{ps.grossSalary.toLocaleString()}
-                  </td>
-                  <td className="text-sm text-right tabular-nums font-semibold text-emerald-500">
-                    ₹{ps.netSalary.toLocaleString()}
-                  </td>
-                  <td className="text-center">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPayslip(ps)}
-                      className="px-2.5 py-1 text-xs rounded-md border border-border bg-surface hover:bg-elevated text-primary font-semibold transition-colors cursor-pointer"
-                    >
-                      Breakdown
-                    </button>
-                  </td>
-                </tr>
-              ))
+              payrun.payslips.map((ps) => {
+                const deductionAmount = ps.totalDeductions || Math.max(0, ps.grossSalary - ps.netSalary);
+                return (
+                  <tr key={ps.id}>
+                    <td>
+                      <div className="font-semibold text-text-primary">{ps.employeeName}</div>
+                      <span className="text-[10px] text-text-muted uppercase">
+                        {ps.employeeCode || ps.jobPosition}
+                      </span>
+                    </td>
+                    <td className="text-xs text-text-secondary">
+                      {ps.departmentName}
+                    </td>
+                    <td className="text-sm text-right tabular-nums text-text-secondary">
+                      ₹{ps.basicSalary.toLocaleString()}
+                    </td>
+                    <td className="text-sm text-right tabular-nums font-medium text-text-primary">
+                      ₹{ps.grossSalary.toLocaleString()}
+                    </td>
+                    <td className="text-sm text-right tabular-nums font-medium text-rose-500">
+                      -₹{deductionAmount.toLocaleString()}
+                    </td>
+                    <td className="text-sm text-right tabular-nums font-semibold text-emerald-500">
+                      ₹{ps.netSalary.toLocaleString()}
+                    </td>
+                    <td className="text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPayslip(ps)}
+                          className="px-2.5 py-1 text-xs rounded-md border border-border bg-surface hover:bg-elevated text-primary font-semibold transition-colors cursor-pointer"
+                        >
+                          Breakdown
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadPdf(ps.id, ps.employeeCode)}
+                          title="Download Official PDF"
+                          className="p-1.5 text-xs rounded-md border border-border bg-surface hover:bg-elevated text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                        >
+                          <Download size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-text-muted text-sm">
+                <td colSpan={7} className="p-12 text-center text-text-muted text-sm">
                   No payslips generated yet. Click "Compute Payslips" above to process this batch.
                 </td>
               </tr>
@@ -308,94 +370,143 @@ export const PayrunDetailPage: React.FC = () => {
 
       {/* Line Items Breakdown Modal */}
       {selectedPayslip && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-surface border border-border rounded-2xl max-w-lg w-full p-6 shadow-xl animate-in zoom-in-95">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-surface border border-border rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-start border-b border-border pb-3 mb-4">
               <div>
                 <h3 className="font-heading text-lg font-bold text-text-primary m-0">
                   Payslip Breakdown
                 </h3>
                 <p className="text-xs text-text-muted m-0 mt-0.5">
-                  {selectedPayslip.employeeName} • {selectedPayslip.departmentName}
+                  {selectedPayslip.employeeName} {selectedPayslip.employeeCode ? `(${selectedPayslip.employeeCode})` : ''} • {selectedPayslip.departmentName}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedPayslip(null)}
-                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1"
+                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1 rounded-lg hover:bg-elevated"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-2 mb-6 text-sm">
-              <div className="flex justify-between py-1.5 border-b border-border">
-                <span className="text-text-secondary">Basic Salary</span>
-                <span className="font-semibold text-text-primary tabular-nums">
-                  ₹{selectedPayslip.basicSalary.toLocaleString()}
-                </span>
-              </div>
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-sm">
+              {/* Earnings Section */}
+              <div className="rounded-xl border border-border/70 p-3.5 bg-surface/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <TrendingUp size={13} /> Gross Earnings
+                  </span>
+                  <span className="font-bold text-sm text-text-primary tabular-nums">
+                    ₹{selectedPayslip.grossSalary.toLocaleString()}
+                  </span>
+                </div>
 
-              {selectedPayslip.lines && selectedPayslip.lines.length > 0 ? (
-                selectedPayslip.lines.map((line) => (
-                  <div
-                    key={line.id}
-                    className="flex justify-between py-1.5 border-b border-border text-xs"
-                  >
-                    <span className="flex items-center gap-1.5 text-text-secondary">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          line.category === 'ALLOWANCE'
-                            ? 'bg-emerald-500'
-                            : line.category === 'DEDUCTION'
-                            ? 'bg-red-400'
-                            : 'bg-primary'
-                        }`}
-                      />
-                      <span>{line.name}</span>
-                      <span className="text-[10px] text-text-muted">({line.code})</span>
-                    </span>
-                    <span
-                      className={`font-semibold tabular-nums ${
-                        line.category === 'DEDUCTION' ? 'text-red-500' : 'text-text-primary'
-                      }`}
-                    >
-                      {line.category === 'DEDUCTION' ? '-' : '+'}₹
-                      {Math.abs(line.amount).toLocaleString()}
+                <div className="divide-y divide-border/50 text-xs">
+                  <div className="flex justify-between py-1.5 text-text-secondary">
+                    <span>Basic Salary</span>
+                    <span className="font-semibold text-text-primary tabular-nums">
+                      ₹{selectedPayslip.basicSalary.toLocaleString()}
                     </span>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-xs text-text-muted py-2">
-                  No individual line items computed yet.
-                </div>
-              )}
 
-              <div className="flex justify-between py-2.5 border-t border-border font-bold text-base mt-2">
-                <span className="text-text-primary">Net Payable</span>
-                <span className="text-emerald-500 text-lg tabular-nums">
+                  {selectedPayslip.lines && selectedPayslip.lines.filter(l => l.category !== 'DEDUCTION' && l.category !== 'NET').map((line) => (
+                    <div key={line.id} className="flex justify-between py-1.5 text-text-secondary">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>{line.name}</span>
+                        <span className="text-[10px] text-text-muted uppercase">({line.code})</span>
+                      </span>
+                      <span className="font-semibold text-text-primary tabular-nums">
+                        +₹{Math.abs(line.amount).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Deductions Section */}
+              <div className="rounded-xl border border-border/70 p-3.5 bg-surface/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                    <Minus size={13} /> Statutory & Policy Deductions
+                  </span>
+                  <span className="font-bold text-sm text-rose-600 dark:text-rose-400 tabular-nums">
+                    -₹{(selectedPayslip.totalDeductions || Math.max(0, selectedPayslip.grossSalary - selectedPayslip.netSalary)).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="divide-y divide-border/50 text-xs">
+                  {selectedPayslip.lines && selectedPayslip.lines.filter(l => l.category === 'DEDUCTION').length > 0 ? (
+                    selectedPayslip.lines.filter(l => l.category === 'DEDUCTION').map((line) => (
+                      <div key={line.id} className="flex justify-between py-1.5 text-text-secondary">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                          <span>{line.name}</span>
+                          <span className="text-[10px] text-text-muted uppercase">({line.code})</span>
+                        </span>
+                        <span className="font-semibold text-rose-500 tabular-nums">
+                          -₹{Math.abs(line.amount).toLocaleString()}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-1 text-[11px] text-text-muted">
+                      No statutory deductions applied to this contract.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Net Payable Highlight Banner */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                <div>
+                  <span className="text-xs font-bold text-text-primary uppercase tracking-wider block">
+                    Net Take-Home Pay
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    Final disbursement to employee bank account
+                  </span>
+                </div>
+                <span className="text-xl font-bold font-heading text-emerald-600 dark:text-emerald-400 tabular-nums">
                   ₹{selectedPayslip.netSalary.toLocaleString()}
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between gap-2 pt-4 border-t border-border mt-4">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5"
+                onClick={() => handleViewPdf(selectedPayslip.id)}
+                className="flex items-center gap-1.5 text-xs"
               >
-                <FileText size={14} />
-                <span>Print PDF</span>
+                <ExternalLink size={14} />
+                <span>View PDF</span>
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setSelectedPayslip(null)}
-              >
-                Close
-              </Button>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleDownloadPdf(selectedPayslip.id, selectedPayslip.employeeCode)}
+                  isLoading={isDownloadingPdf}
+                  disabled={isDownloadingPdf}
+                  className="flex items-center gap-1.5 text-xs"
+                >
+                  <Download size={14} />
+                  <span>Download PDF</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedPayslip(null)}
+                  className="text-xs"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </div>

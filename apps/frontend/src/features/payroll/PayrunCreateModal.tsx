@@ -204,6 +204,7 @@ export const PayrunCreateModal: React.FC<PayrunCreateModalProps> = ({ isOpen, on
               variant="primary"
               size="sm"
               disabled={createMutation.isPending}
+              isLoading={createMutation.isPending}
             >
               {createMutation.isPending ? 'Initializing...' : 'Create Payrun'}
             </Button>

@@ -17,19 +17,23 @@ export const TimeOffPage = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isAllocationModalOpen, setIsAllocationModalOpen] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
   const canApproveTimeOff = useAuthStore((state) => state.canApproveTimeOff)();
   const isEmployeeOnly = useAuthStore((state) => state.isEmployeeOnly)();
 
+  // If regular employee, strictly scope to their own employeeId
+  const effectiveEmployeeId = isEmployeeOnly ? (user?.employeeId || undefined) : employeeIdParam;
+
   const queryParams = {
-    employeeId: employeeIdParam,
+    employeeId: effectiveEmployeeId,
     myTeam: myTeamFilter || undefined,
   };
 
   const { data: requests, isLoading: isLoadingRequests } = useTimeOffRequests(
-    employeeIdParam || myTeamFilter ? queryParams : undefined
+    effectiveEmployeeId || myTeamFilter ? queryParams : undefined
   );
   const { data: allocations, isLoading: isLoadingAllocations } = useTimeOffAllocations(
-    employeeIdParam ? { employeeId: employeeIdParam } : undefined
+    effectiveEmployeeId ? { employeeId: effectiveEmployeeId } : undefined
   );
 
   const approveMutation = useApproveTimeOff();
@@ -37,9 +41,9 @@ export const TimeOffPage = () => {
 
   const pendingCount = requests?.filter((r) => r.status === 'Pending').length || 0;
 
-  // Calculate allocations summary
-  const totalAllocated = allocations?.reduce((sum, a) => sum + a.allocated, 0) || 14;
-  const totalRemaining = allocations?.reduce((sum, a) => sum + a.remaining, 0) || 10;
+  // Calculate allocations summary accurately from loaded allocations
+  const totalAllocated = allocations ? allocations.reduce((sum, a) => sum + (Number(a.allocated) || 0), 0) : 0;
+  const totalRemaining = allocations ? allocations.reduce((sum, a) => sum + (Number(a.remaining) || 0), 0) : 0;
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Pending'>('ALL');
 
@@ -237,19 +241,39 @@ export const TimeOffPage = () => {
                     <div className="flex justify-end gap-2 pt-2 border-t border-border">
                       <button 
                         type="button"
-                        disabled={refuseMutation.isPending}
+                        disabled={refuseMutation.isPending || approveMutation.isPending}
                         onClick={() => refuseMutation.mutate(req.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold hover:bg-red-500/15 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
                       >
-                        <Ban size={13} /> Reject
+                        {refuseMutation.isPending && refuseMutation.variables === req.id ? (
+                          <>
+                            <span className="btn-spinner" />
+                            <span>Rejecting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban size={13} />
+                            <span>Reject</span>
+                          </>
+                        )}
                       </button>
                       <button 
                         type="button"
-                        disabled={approveMutation.isPending}
+                        disabled={approveMutation.isPending || refuseMutation.isPending}
                         onClick={() => approveMutation.mutate(req.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
                       >
-                        <Check size={13} /> Approve
+                        {approveMutation.isPending && approveMutation.variables === req.id ? (
+                          <>
+                            <span className="btn-spinner" />
+                            <span>Approving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check size={13} />
+                            <span>Approve</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -285,7 +309,7 @@ export const TimeOffPage = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-heading font-semibold text-text-primary m-0">
-              Leave Quotas & Balances
+              {isEmployeeOnly ? "My Leave Quotas & Balances" : "Leave Quotas & Balances"}
             </h3>
             {canApproveTimeOff && (
               <Button variant="secondary" size="sm" onClick={() => setIsAllocationModalOpen(true)}>
@@ -302,7 +326,7 @@ export const TimeOffPage = () => {
               <table className="table-enterprise">
                 <thead>
                   <tr>
-                    <th>Employee</th>
+                    {!isEmployeeOnly && <th>Employee</th>}
                     <th>Time Off Type</th>
                     <th>Allocated</th>
                     <th>Taken</th>
@@ -313,7 +337,9 @@ export const TimeOffPage = () => {
                 <tbody>
                   {allocations.map((alloc) => (
                     <tr key={alloc.id}>
-                      <td className="font-semibold text-text-primary">{alloc.employeeName}</td>
+                      {!isEmployeeOnly && (
+                        <td className="font-semibold text-text-primary">{alloc.employeeName}</td>
+                      )}
                       <td>
                         <span className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full shadow-xs" style={{ backgroundColor: alloc.displayColor || 'var(--primary)' }} />
@@ -343,7 +369,9 @@ export const TimeOffPage = () => {
                   No Leave Allocations Found
                 </h4>
                 <p className="text-xs text-text-muted max-w-sm m-0 mt-1">
-                  Allocate quotas (e.g. 14 Annual Vacation days) so employees can apply for leaves.
+                  {isEmployeeOnly
+                    ? "You do not have any confirmed leave allocations assigned yet. Please check with your HR manager."
+                    : "Allocate quotas (e.g. 14 Annual Vacation days) so employees can apply for leaves."}
                 </p>
               </div>
               {canApproveTimeOff && (
@@ -361,13 +389,13 @@ export const TimeOffPage = () => {
       <TimeOffRequestModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
-        defaultEmployeeId={employeeIdParam}
+        defaultEmployeeId={effectiveEmployeeId}
       />
 
       <TimeOffAllocationModal
         isOpen={isAllocationModalOpen}
         onClose={() => setIsAllocationModalOpen(false)}
-        defaultEmployeeId={employeeIdParam}
+        defaultEmployeeId={effectiveEmployeeId}
       />
 
     </div>

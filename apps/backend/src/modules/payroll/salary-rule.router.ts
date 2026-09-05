@@ -17,6 +17,11 @@ salaryRuleRouter.get("/", async (req, res, next) => {
 
     const rules = await prisma.salaryRule.findMany({
       where,
+      include: {
+        salaryStructure: {
+          select: { id: true, name: true, code: true },
+        },
+      },
       orderBy: { sequence: "asc" },
     });
 
@@ -60,6 +65,12 @@ salaryRuleRouter.post("/", async (req, res, next) => {
     }
     if (!computationType) {
       computationType = "FIXED_AMOUNT";
+    } else if (computationType === "PERCENTAGE" || computationType === "PERCENTAGE_OF_WAGE") {
+      computationType = "PERCENTAGE_OF_WAGE";
+    } else if (computationType === "PYTHON_CODE") {
+      computationType = "PYTHON_CODE";
+    } else {
+      computationType = "FIXED_AMOUNT";
     }
     if (computationValue === undefined) {
       computationValue = "0";
@@ -87,14 +98,22 @@ salaryRuleRouter.post("/", async (req, res, next) => {
 // PATCH /api/salary-rules/:id
 salaryRuleRouter.patch("/:id", async (req, res, next) => {
   try {
-    const { name, code, category, sequence, computationType, computationValue, isActive } = req.body;
+    let { name, code, category, sequence, computationType, computationValue, isActive } = req.body;
 
     const data: any = {};
     if (name) data.name = name;
     if (code) data.code = code;
     if (category) data.category = category;
     if (sequence !== undefined) data.sequence = Number(sequence);
-    if (computationType) data.computationType = computationType;
+    if (computationType) {
+      if (computationType === "PERCENTAGE" || computationType === "PERCENTAGE_OF_WAGE") {
+        data.computationType = "PERCENTAGE_OF_WAGE";
+      } else if (computationType === "PYTHON_CODE") {
+        data.computationType = "PYTHON_CODE";
+      } else {
+        data.computationType = "FIXED_AMOUNT";
+      }
+    }
     if (computationValue !== undefined) data.computationValue = String(computationValue);
     if (isActive !== undefined) data.isActive = isActive;
 

@@ -3,12 +3,15 @@ import { Button } from '../../components/ui/Button';
 import { useCreateSalaryStructure } from './usePayrollConfig';
 import { X, FileText, AlertCircle } from 'lucide-react';
 
+import type { SalaryStructure } from '../../api/payroll-config';
+
 interface SalaryStructureModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreated?: (newStruct: SalaryStructure) => void;
 }
 
-export const SalaryStructureModal: React.FC<SalaryStructureModalProps> = ({ isOpen, onClose }) => {
+export const SalaryStructureModal: React.FC<SalaryStructureModalProps> = ({ isOpen, onClose, onCreated }) => {
   const createMutation = useCreateSalaryStructure();
 
   const [name, setName] = useState('');
@@ -44,12 +47,15 @@ export const SalaryStructureModal: React.FC<SalaryStructureModalProps> = ({ isOp
     }
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         name: name.trim(),
         code: code.trim() || name.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
         description: description.trim() || undefined,
         isActive: true,
       });
+      if (onCreated && created) {
+        onCreated(created);
+      }
       onClose();
     } catch (err: any) {
       setFormError(err?.message || 'Failed to create salary structure.');
@@ -150,6 +156,7 @@ export const SalaryStructureModal: React.FC<SalaryStructureModalProps> = ({ isOp
               type="submit"
               variant="primary"
               size="sm"
+              isLoading={createMutation.isPending}
               disabled={createMutation.isPending}
             >
               {createMutation.isPending ? 'Saving...' : 'Create Structure'}

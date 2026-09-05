@@ -85,7 +85,7 @@ export const TopNav = () => {
         {/* Payroll Dashboard - Payroll & Admin only */}
         {(isPayroll || isAdmin) && (
           <NavLink to="/payroll/dashboard" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-            Payroll
+            Payroll Analytics
           </NavLink>
         )}
 

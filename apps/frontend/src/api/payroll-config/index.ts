@@ -24,14 +24,25 @@ export interface PayrollRule {
   computationType?: string;
   computationValue?: string;
   sequence?: number;
+  salaryStructureId?: string;
+  salaryStructure?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
 }
 
 function normalizeStructure(s: any): SalaryStructure {
+  const ruleCount = s._count?.rules ?? 0;
+  const isExecutive = s.name?.toLowerCase().includes('exec');
+  const fallbackBase = isExecutive ? 120000 : (ruleCount > 0 ? ruleCount * 10000 : 75000);
+
   return {
     ...s,
-    type: s.type || 'Standard',
-    baseSalary: s.baseSalary || (s._count ? s._count.rules * 10000 : 50000),
+    type: s.type || (isExecutive ? 'Executive' : 'Standard'),
+    baseSalary: s.baseSalary || fallbackBase,
     status: s.isActive === false ? 'Archived' : 'Active',
+    _count: s._count || { rules: 0, contracts: 0, payruns: 0 },
   };
 }
 
@@ -46,10 +57,12 @@ function normalizeRule(r: any): PayrollRule {
 
   let amount = r.amount;
   if (!amount) {
-    if (r.computationType === 'PERCENTAGE') {
-      amount = `${r.computationValue}%`;
+    if (r.computationType === 'PERCENTAGE' || r.computationType === 'PERCENTAGE_OF_WAGE') {
+      amount = `${r.computationValue}% of Wage`;
     } else if (r.computationType === 'FIXED_AMOUNT') {
       amount = `₹${Number(r.computationValue || 0).toLocaleString()}`;
+    } else if (r.computationType === 'PYTHON_CODE') {
+      amount = 'fx Formula';
     } else {
       amount = r.computationValue || 'Rule Code';
     }
@@ -77,8 +90,9 @@ export async function createSalaryStructure(data: {
   return normalizeStructure(created);
 }
 
-export async function getPayrollRules(): Promise<PayrollRule[]> {
-  const data = await apiClient.get<any[]>('/salary-rules');
+export async function getPayrollRules(params?: { salaryStructureId?: string }): Promise<PayrollRule[]> {
+  const query = params?.salaryStructureId ? `?salaryStructureId=${params.salaryStructureId}` : '';
+  const data = await apiClient.get<any[]>(`/salary-rules${query}`);
   return data.map(normalizeRule);
 }
 

@@ -11,6 +11,7 @@
   --font-heading: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-handwritten: 'Inter', sans-serif; /* Fallback for legacy class references */
   
+  --fw-light: 300;
   --fw-normal: 400;
   --fw-medium: 500;
   --fw-semibold: 600;

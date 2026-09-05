@@ -257,6 +257,7 @@ payrunRouter.get("/:id", async (req, res, next) => {
                 department: { select: { name: true } },
               },
             },
+            lines: { orderBy: { sequence: "asc" } },
             warnings: true,
           },
           orderBy: { employee: { employeeCode: "asc" } },

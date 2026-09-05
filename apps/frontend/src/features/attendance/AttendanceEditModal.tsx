@@ -201,6 +201,7 @@ export const AttendanceEditModal: React.FC<AttendanceEditModalProps> = ({
               variant="primary"
               size="sm"
               disabled={updateMutation.isPending}
+              isLoading={updateMutation.isPending}
             >
               {updateMutation.isPending ? 'Saving Punch...' : 'Save Changes'}
             </Button>

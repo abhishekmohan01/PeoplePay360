@@ -242,6 +242,7 @@ export const TimeOffAllocationModal: React.FC<TimeOffAllocationModalProps> = ({
               variant="primary"
               size="sm"
               disabled={createMutation.isPending}
+              isLoading={createMutation.isPending}
             >
               {createMutation.isPending ? 'Allocating...' : 'Confirm Allocation'}
             </Button>

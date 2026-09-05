@@ -295,6 +295,7 @@ export const AttendanceManualEntryModal: React.FC<AttendanceManualEntryModalProp
               variant="primary"
               size="sm"
               disabled={createMutation.isPending}
+              isLoading={createMutation.isPending}
             >
               {createMutation.isPending ? 'Recording...' : 'Create Entry'}
             </Button>

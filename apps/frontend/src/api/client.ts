@@ -116,5 +116,29 @@ export const apiClient = {
 
   delete<T>(endpoint: string, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  },
+
+  async getBlob(endpoint: string): Promise<Blob> {
+    const token = useAuthStore.getState().token;
+    const headers = new Headers();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+    }
+
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to fetch file');
+    }
+
+    return response.blob();
   }
 };

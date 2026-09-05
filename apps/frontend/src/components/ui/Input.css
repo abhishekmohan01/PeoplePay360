@@ -30,6 +30,8 @@
 
 .input::placeholder {
   color: var(--input-placeholder);
+  font-weight: 300;
+  opacity: 0.75;
 }
 
 .input:focus {

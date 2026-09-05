@@ -28,7 +28,7 @@ export async function seedDatabase() {
     company = await prisma.company.create({
       data: {
         name: "Acme PeoplePay Corp",
-        currency: "USD",
+        currency: "INR",
         timezone: "UTC",
         isActive: true,
       },
@@ -86,7 +86,7 @@ export async function seedDatabase() {
   // 5. Time Off Types
   const leaveTypesData = [
     { name: "Paid Time Off (PTO)", unit: "DAYS" as const, requiresAllocation: true, approvalRequired: true, payrollWorkEntry: true, displayColor: "#3B82F6" },
-    { name: "Sick Leave", unit: "DAYS" as const, requiresAllocation: true, approvalRequired: true, payrollWorkEntry: true, displayColor: "#EF4444" },
+    { name: "Sick Leave", unit: "DAYS" as const, requiresAllocation: false, approvalRequired: true, payrollWorkEntry: true, displayColor: "#EF4444" },
     { name: "Unpaid Leave", unit: "DAYS" as const, requiresAllocation: false, approvalRequired: true, payrollWorkEntry: false, displayColor: "#F59E0B" },
   ];
 

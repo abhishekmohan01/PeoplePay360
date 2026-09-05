@@ -13,6 +13,7 @@ export const ScheduleListPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: schedules, isLoading } = useSchedules();
   const [search, setSearch] = useState('');
+  const [filterStandardOnly, setFilterStandardOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
 
@@ -21,6 +22,7 @@ export const ScheduleListPage: React.FC = () => {
   const totalAssignedStaff = schedules?.reduce((sum, s) => sum + (s.assignedEmployees || 0), 0) || 0;
 
   const filtered = schedules?.filter((s) => {
+    if (filterStandardOnly && (s.hoursPerWeek || 0) < 40) return false;
     const q = search.toLowerCase();
     return (
       !q ||
@@ -55,8 +57,10 @@ export const ScheduleListPage: React.FC = () => {
       {/* Interactive KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div 
-          onClick={() => setSearch('')}
-          className="bg-surface border border-border hover:border-primary/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
+          onClick={() => { setFilterStandardOnly(false); setSearch(''); }}
+          className={`bg-surface border rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none ${
+            !filterStandardOnly && !search ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/40'
+          }`}
           title="Click to view all working schedules"
         >
           <div className="flex items-center justify-between mb-2">
@@ -74,9 +78,11 @@ export const ScheduleListPage: React.FC = () => {
         </div>
 
         <div 
-          onClick={() => setSearch('Fixed')}
-          className="bg-surface border border-border hover:border-emerald-500/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
-          title="Click to filter by standard 40h schedules"
+          onClick={() => setFilterStandardOnly((prev) => !prev)}
+          className={`bg-surface border rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none ${
+            filterStandardOnly ? 'border-emerald-500 ring-1 ring-emerald-500/30 bg-emerald-500/5' : 'border-border hover:border-emerald-500/40'
+          }`}
+          title="Click to toggle filter for standard 40h+ schedules"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Standard Shifts (40h)</span>
@@ -88,7 +94,7 @@ export const ScheduleListPage: React.FC = () => {
             {standardSchedules}
           </div>
           <div className="text-[11px] text-text-muted mt-1 truncate">
-            Standard full-time workforce shifts
+            {filterStandardOnly ? 'Active filter: Showing 40h+ (Click to reset)' : 'Click to filter standard 40h+ shifts'}
           </div>
         </div>
 
@@ -112,13 +118,28 @@ export const ScheduleListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="w-full sm:w-80 mb-6">
-        <SearchInput 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search schedules by name or type..."
-        />
+      {/* Search Bar & Active Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="w-full sm:w-80">
+          <SearchInput 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search schedules by name or type..."
+          />
+        </div>
+        {filterStandardOnly && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 text-xs font-medium">
+            <span>Filter: Standard Shifts (40h+)</span>
+            <button 
+              type="button" 
+              onClick={() => setFilterStandardOnly(false)} 
+              className="hover:opacity-75 cursor-pointer ml-1"
+              title="Remove filter"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {isLoading && (

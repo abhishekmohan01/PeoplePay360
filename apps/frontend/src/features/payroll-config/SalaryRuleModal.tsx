@@ -3,43 +3,67 @@ import { Button } from '../../components/ui/Button';
 import { useCreateSalaryRule, useSalaryStructures } from './usePayrollConfig';
 import { X, Calculator, AlertCircle, Layers } from 'lucide-react';
 
+import type { PayrollRule } from '../../api/payroll-config';
+
 interface SalaryRuleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultStructureId?: string;
+  defaultCategory?: 'ALLOWANCE' | 'DEDUCTION' | 'BASIC' | 'GROSS' | 'NET';
+  onCreated?: (newRule: PayrollRule) => void;
 }
 
-export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ isOpen, onClose }) => {
+export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  defaultStructureId,
+  defaultCategory = 'ALLOWANCE',
+  onCreated
+}) => {
   const { data: structures } = useSalaryStructures();
   const createMutation = useCreateSalaryRule();
 
   const [salaryStructureId, setSalaryStructureId] = useState('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [category, setCategory] = useState<'ALLOWANCE' | 'DEDUCTION'>('ALLOWANCE');
-  const [computationType, setComputationType] = useState<'PERCENTAGE' | 'FIXED_AMOUNT'>('FIXED_AMOUNT');
-  const [computationValue, setComputationValue] = useState('5000');
-  const [sequence, setSequence] = useState('10');
+  const [category, setCategory] = useState<'ALLOWANCE' | 'DEDUCTION' | 'BASIC' | 'GROSS' | 'NET'>(defaultCategory);
+  const [computationType, setComputationType] = useState<'FIXED_AMOUNT' | 'PERCENTAGE_OF_WAGE' | 'PYTHON_CODE'>('FIXED_AMOUNT');
+  const [computationValue, setComputationValue] = useState('2000');
+  const [sequence, setSequence] = useState('25');
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      if (structures && structures.length > 0 && structures[0]) {
+      if (defaultStructureId) {
+        setSalaryStructureId(defaultStructureId);
+      } else if (structures && structures.length > 0 && structures[0]) {
         setSalaryStructureId(structures[0].id);
       }
       setName('');
       setCode('');
-      setCategory('ALLOWANCE');
+      setCategory(defaultCategory);
       setComputationType('FIXED_AMOUNT');
-      setComputationValue('5000');
-      setSequence('10');
+      setComputationValue(defaultCategory === 'DEDUCTION' ? '500' : '2000');
+      setSequence(defaultCategory === 'DEDUCTION' ? '80' : '25');
       setFormError(null);
     }
-  }, [isOpen, structures]);
+  }, [isOpen, structures, defaultStructureId, defaultCategory]);
 
   const handleNameChange = (val: string) => {
     setName(val);
     if (!code || code === name.toUpperCase().replace(/[^A-Z0-9]/g, '_')) {
       setCode(val.toUpperCase().replace(/[^A-Z0-9]/g, '_'));
+    }
+  };
+
+  const handleComputationTypeChange = (type: 'FIXED_AMOUNT' | 'PERCENTAGE_OF_WAGE' | 'PYTHON_CODE') => {
+    setComputationType(type);
+    if (type === 'FIXED_AMOUNT') {
+      setComputationValue('2000');
+    } else if (type === 'PERCENTAGE_OF_WAGE') {
+      setComputationValue('15');
+    } else {
+      setComputationValue('return basic * 0.10;');
     }
   };
 
@@ -57,21 +81,28 @@ export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ isOpen, onClos
       setFormError('Please select a salary structure.');
       return;
     }
-    if (!computationValue || isNaN(Number(computationValue))) {
-      setFormError('Please provide a valid computation value.');
+    if (!computationValue.trim()) {
+      setFormError('Please provide a valid computation value or formula.');
+      return;
+    }
+    if (computationType !== 'PYTHON_CODE' && isNaN(Number(computationValue))) {
+      setFormError('Please provide a valid numeric value.');
       return;
     }
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         salaryStructureId,
         name: name.trim(),
         code: code.trim() || name.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
         category,
         computationType,
-        computationValue: String(computationValue),
-        sequence: Number(sequence) || 10,
+        computationValue: String(computationValue).trim(),
+        sequence: Number(sequence) || 25,
       });
+      if (onCreated && created) {
+        onCreated(created);
+      }
       onClose();
     } catch (err: any) {
       setFormError(err?.message || 'Failed to create salary rule.');
@@ -175,11 +206,14 @@ export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ isOpen, onClos
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as 'ALLOWANCE' | 'DEDUCTION')}
+                onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all cursor-pointer"
               >
                 <option value="ALLOWANCE">Allowance (+ Adds to Gross)</option>
                 <option value="DEDUCTION">Deduction (- Subtracts from Net)</option>
+                <option value="BASIC">Basic Component</option>
+                <option value="GROSS">Gross Target</option>
+                <option value="NET">Net Salary Target</option>
               </select>
             </div>
 
@@ -189,47 +223,80 @@ export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ isOpen, onClos
               </label>
               <select
                 value={computationType}
-                onChange={(e) => setComputationType(e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT')}
+                onChange={(e) => handleComputationTypeChange(e.target.value as any)}
                 className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all cursor-pointer"
               >
                 <option value="FIXED_AMOUNT">Fixed Amount (₹ / month)</option>
-                <option value="PERCENTAGE">Percentage of Basic (%)</option>
+                <option value="PERCENTAGE_OF_WAGE">Percentage of Base Wage (%)</option>
+                <option value="PYTHON_CODE">Dynamic Formula (JS / Python Code)</option>
               </select>
             </div>
           </div>
 
-          {/* Value & Sequence */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1.5">
-                {computationType === 'PERCENTAGE' ? 'Percentage Rate (%)' : 'Monthly Amount (₹)'} *
+          {/* Value or Formula & Sequence */}
+          {computationType === 'PYTHON_CODE' ? (
+            <div className="flex flex-col gap-2">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Formula Expression *
               </label>
-              <input
-                type="number"
-                min="0"
-                step={computationType === 'PERCENTAGE' ? '0.1' : '100'}
+              <textarea
+                rows={3}
                 value={computationValue}
                 onChange={(e) => setComputationValue(e.target.value)}
-                placeholder={computationType === 'PERCENTAGE' ? '12.5' : '5000'}
-                className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
+                placeholder="return basic + (wage * 0.10);"
+                className="w-full px-3 py-2 text-xs font-mono bg-elevated/50 border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all resize-none"
                 required
               />
+              <span className="text-[11px] text-text-muted">
+                Available variables: <code className="text-primary font-mono">wage</code>, <code className="text-primary font-mono">basic</code>, <code className="text-primary font-mono">gross</code>, <code className="text-primary font-mono">deductions</code>, <code className="text-primary font-mono">overtime</code>, <code className="text-primary font-mono">workedDays</code>, <code className="text-primary font-mono">unpaidDays</code>
+              </span>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1.5 mt-2">
+                  Evaluation Sequence (Lower runs first)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={sequence}
+                  onChange={(e) => setSequence(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
+                />
+              </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1.5">
+                  {computationType === 'PERCENTAGE_OF_WAGE' ? 'Percentage Rate (%) *' : 'Monthly Amount (₹) *'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step={computationType === 'PERCENTAGE_OF_WAGE' ? '0.1' : '100'}
+                  value={computationValue}
+                  onChange={(e) => setComputationValue(e.target.value)}
+                  placeholder={computationType === 'PERCENTAGE_OF_WAGE' ? '15.0' : '2000'}
+                  className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1.5">
-                Evaluation Sequence
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={sequence}
-                onChange={(e) => setSequence(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1.5">
+                  Evaluation Sequence
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={sequence}
+                  onChange={(e) => setSequence(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-xl text-text-primary focus:outline-hidden focus:ring-1 focus:ring-primary transition-all"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Footer Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border mt-auto">
@@ -246,6 +313,7 @@ export const SalaryRuleModal: React.FC<SalaryRuleModalProps> = ({ isOpen, onClos
               type="submit"
               variant="primary"
               size="sm"
+              isLoading={createMutation.isPending}
               disabled={createMutation.isPending}
             >
               {createMutation.isPending ? 'Saving...' : 'Add Rule'}

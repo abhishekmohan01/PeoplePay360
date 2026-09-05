@@ -4,7 +4,8 @@ import { DatePicker } from '../../components/ui/DatePicker';
 import { EmployeeSearchSelect } from '../../components/ui/EmployeeSearchSelect';
 import { useCreateContract } from './useContracts';
 import { useSalaryStructures } from '../payroll-config/usePayrollConfig';
-import { X, FileText, AlertCircle, Info } from 'lucide-react';
+import { useSchedules } from '../schedules/useSchedules';
+import { X, FileText, AlertCircle, Info, Clock } from 'lucide-react';
 import type { Employee } from '../../api/employees';
 
 interface ContractCreateModalProps {
@@ -19,6 +20,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   defaultEmployeeId,
 }) => {
   const { data: salaryStructures } = useSalaryStructures();
+  const { data: schedules } = useSchedules();
   const createMutation = useCreateContract();
 
   const [employeeId, setEmployeeId] = useState('');
@@ -28,6 +30,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [salaryStructureId, setSalaryStructureId] = useState('');
+  const [workingScheduleId, setWorkingScheduleId] = useState('');
   const [status, setStatus] = useState('RUNNING');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -39,6 +42,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         setSalaryStructureId(salaryStructures[0]?.id ?? '');
         setWage(String(salaryStructures[0]?.baseSalary ?? 85000));
       }
+      if (schedules && schedules.length > 0) {
+        setWorkingScheduleId(schedules[0]?.id ?? '');
+      }
       const today = new Date().toISOString().split('T')[0] ?? '';
       setStartDate(today);
       setEndDate('');
@@ -46,7 +52,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       setStatus('RUNNING');
       setFormError(null);
     }
-  }, [isOpen, defaultEmployeeId, salaryStructures]);
+  }, [isOpen, defaultEmployeeId, salaryStructures, schedules]);
 
   const handleEmployeeChange = (id: string, emp: Employee | null) => {
     setEmployeeId(id);
@@ -91,6 +97,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         wage: wageAmount,
         jobPosition: jobPosition.trim() || 'Staff',
         contractType,
+        workingScheduleId: workingScheduleId || undefined,
         salaryStructureId: salaryStructureId || undefined,
         status,
       },
@@ -191,8 +198,27 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               </div>
             </div>
 
-            {/* Salary Structure & Wage */}
+            {/* Working Schedule & Salary Structure */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                  <Clock size={12} className="text-primary" />
+                  Working Schedule *
+                </label>
+                <select
+                  value={workingScheduleId}
+                  onChange={(e) => setWorkingScheduleId(e.target.value)}
+                  className="border border-border bg-surface text-text-primary p-2.5 rounded-lg text-sm outline-none focus:border-primary cursor-pointer"
+                  required
+                >
+                  {schedules?.map((sch) => (
+                    <option key={sch.id} value={sch.id}>
+                      {sch.name} ({sch.hoursPerWeek}h/wk)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Salary Structure Template
@@ -210,21 +236,22 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Monthly Base Wage (₹) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={wage}
-                  onChange={(e) => setWage(e.target.value)}
-                  className="border border-border bg-surface text-text-primary p-2.5 rounded-lg text-sm outline-none focus:border-primary"
-                  required
-                />
-              </div>
+            {/* Monthly Base Wage */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                Monthly Base Wage (₹) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={wage}
+                onChange={(e) => setWage(e.target.value)}
+                className="border border-border bg-surface text-text-primary p-2.5 rounded-lg text-sm outline-none focus:border-primary"
+                required
+              />
             </div>
 
             {/* Start & End Dates */}
@@ -313,6 +340,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               variant="primary"
               size="sm"
               disabled={createMutation.isPending}
+              isLoading={createMutation.isPending}
             >
               {createMutation.isPending ? 'Creating Contract...' : 'Create Contract'}
             </Button>
