@@ -48,14 +48,47 @@ export async function getUsers(): Promise<UserAccount[]> {
   return data.map(normalizeUser);
 }
 
-export async function createUser(data: any): Promise<UserAccount> {
+export async function createUser(data: {
+  email: string;
+  password?: string;
+  employeeId?: string | null;
+  roleCodes?: string[];
+  role?: string;
+  status?: string;
+}): Promise<UserAccount> {
   const roleCode = data.role ? data.role.toUpperCase().replace(/\s+/g, '_') : 'EMPLOYEE';
+  const roleCodes = Array.isArray(data.roleCodes) && data.roleCodes.length > 0 
+    ? data.roleCodes 
+    : [roleCode];
+
   const payload = {
     email: data.email,
     password: data.password || 'password123',
     employeeId: data.employeeId || null,
-    roleCodes: data.roleCodes || [roleCode],
+    roleCodes,
   };
   const created = await apiClient.post<any>('/users', payload);
   return normalizeUser(created);
+}
+
+export async function updateUser(
+  id: string, 
+  data: { status?: string; email?: string; employeeId?: string | null; roleCodes?: string[] }
+): Promise<UserAccount> {
+  const patchData: any = {};
+  if (data.status) patchData.status = data.status.toUpperCase();
+  if (data.email) patchData.email = data.email;
+  if (data.employeeId !== undefined) patchData.employeeId = data.employeeId;
+
+  const res = await apiClient.patch<any>(`/users/${id}`, patchData);
+
+  if (Array.isArray(data.roleCodes)) {
+    try {
+      await apiClient.patch<any>(`/users/${id}/roles`, { roleCodes: data.roleCodes });
+    } catch (err) {
+      console.warn("Could not update roles:", err);
+    }
+  }
+
+  return normalizeUser(res);
 }

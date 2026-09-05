@@ -17,10 +17,7 @@ function getInitialTheme(): Theme {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (stored === 'dark' || stored === 'light') return stored;
   } catch {}
-  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    return 'light';
-  }
-  return 'dark';
+  return 'light';
 }
 
 function applyTheme(theme: Theme) {

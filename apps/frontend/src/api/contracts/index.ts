@@ -54,3 +54,20 @@ export async function getContract(id: string): Promise<Contract> {
   const data = await apiClient.get<any>(`/contracts/${id}`);
   return normalizeContract(data);
 }
+
+export async function createContract(data: {
+  employeeId: string;
+  departmentId?: string;
+  startDate: string;
+  endDate?: string | null;
+  wage: number;
+  jobPosition?: string;
+  contractType?: string;
+  workingScheduleId?: string;
+  salaryStructureId?: string;
+  status?: string;
+}): Promise<Contract> {
+  const res = await apiClient.post<any>('/contracts', data);
+  return normalizeContract(res);
+}
+

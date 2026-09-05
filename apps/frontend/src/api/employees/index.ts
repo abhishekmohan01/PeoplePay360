@@ -21,9 +21,26 @@ export interface Employee {
   companyName?: string;
   manager?: { id: string; firstName: string; lastName: string; employeeCode?: string; jobPosition?: string } | null;
   managerName?: string;
+  subordinates?: Array<{ id: string; firstName: string; lastName: string; employeeCode?: string; jobPosition?: string }>;
   contracts?: Array<{ id: string; contractNumber?: string; wage?: number; status?: string; salaryStructure?: any; workingSchedule?: any }>;
   workingSchedule?: string;
   workLocation?: string;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankIdentifierCode?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
+    id: string;
+    email: string;
+    status: string;
+    roles?: Array<{
+      role?: { id: string; code: string; name: string; description?: string };
+      id?: string;
+      code?: string;
+      name?: string;
+    }>;
+  } | null;
   _count?: {
     contracts: number;
     attendances: number;
@@ -52,12 +69,66 @@ function normalizeEmployee(emp: any): Employee {
   };
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  companyId?: string;
+  isActive?: boolean;
+}
+
+export interface CreateEmployeeInput {
+  firstName: string;
+  lastName: string;
+  jobPosition: string;
+  departmentId: string;
+  employeeCode?: string;
+  workEmail?: string;
+  workPhone?: string;
+  employeeType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN' | string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | string;
+  managerId?: string | null;
+  bankAccountNumber?: string;
+  bankName?: string;
+  bankIdentifierCode?: string;
+  workLocation?: string;
+}
+
 export async function getEmployees(): Promise<Employee[]> {
   const employees = await apiClient.get<any[]>('/employees');
+  return employees.map(normalizeEmployee);
+}
+
+/** Lightweight search — only fetches `limit` matching employees for the search widget */
+export async function searchEmployees(
+  query: string,
+  limit = 20,
+  status = 'ACTIVE',
+): Promise<Employee[]> {
+  const params = new URLSearchParams({
+    search: query.trim(),
+    limit: String(limit),
+    status,
+  });
+  const employees = await apiClient.get<any[]>(`/employees?${params}`);
   return employees.map(normalizeEmployee);
 }
 
 export async function getEmployee(id: string): Promise<Employee> {
   const emp = await apiClient.get<any>(`/employees/${id}`);
   return normalizeEmployee(emp);
+}
+
+export async function createEmployee(data: CreateEmployeeInput): Promise<Employee> {
+  const emp = await apiClient.post<any>('/employees', data);
+  return normalizeEmployee(emp);
+}
+
+export async function updateEmployee(id: string, data: Partial<CreateEmployeeInput>): Promise<Employee> {
+  const emp = await apiClient.patch<any>(`/employees/${id}`, data);
+  return normalizeEmployee(emp);
+}
+
+export async function getDepartments(): Promise<Department[]> {
+  return apiClient.get<Department[]>('/departments');
 }

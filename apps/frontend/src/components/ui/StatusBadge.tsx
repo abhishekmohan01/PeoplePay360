@@ -13,10 +13,10 @@ export const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
     // Auto-derive variant based on common statuses if not explicitly provided
     let finalVariant = variant;
     if (!finalVariant) {
-      const lower = status.toLowerCase();
-      if (['active', 'paid', 'approved', 'present'].includes(lower)) finalVariant = 'success';
-      else if (['warning', 'pending', 'draft'].includes(lower)) finalVariant = 'warning';
-      else if (['error', 'inactive', 'refused', 'absent'].includes(lower)) finalVariant = 'error';
+      const lower = (status || '').toLowerCase();
+      if (['active', 'paid', 'approved', 'present', 'running'].includes(lower)) finalVariant = 'success';
+      else if (['warning', 'pending', 'draft', 'submitted', 'part_time'].includes(lower)) finalVariant = 'warning';
+      else if (['error', 'inactive', 'refused', 'rejected', 'absent', 'terminated', 'cancelled'].includes(lower)) finalVariant = 'error';
       else finalVariant = 'default';
     }
 

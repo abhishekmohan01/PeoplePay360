@@ -30,3 +30,26 @@ export async function getSchedules(): Promise<Schedule[]> {
   const data = await apiClient.get<any[]>('/working-schedules');
   return data.map(normalizeSchedule);
 }
+
+export async function createSchedule(data: {
+  name: string;
+  timezone?: string;
+  days?: { dayOfWeek: number; startTime: string; endTime: string; hours: number; breakMinutes: number }[];
+}): Promise<Schedule> {
+  const res = await apiClient.post<any>('/working-schedules', data);
+  return normalizeSchedule(res);
+}
+
+export async function updateSchedule(
+  id: string,
+  data: {
+    name?: string;
+    timezone?: string;
+    isActive?: boolean;
+    days?: { dayOfWeek: number; startTime: string; endTime: string; hours: number; breakMinutes: number }[];
+  }
+): Promise<Schedule> {
+  const res = await apiClient.patch<any>(`/working-schedules/${id}`, data);
+  return normalizeSchedule(res);
+}
+

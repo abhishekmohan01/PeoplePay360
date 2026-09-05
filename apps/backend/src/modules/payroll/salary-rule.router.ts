@@ -29,7 +29,7 @@ salaryRuleRouter.get("/", async (req, res, next) => {
 // POST /api/salary-rules
 salaryRuleRouter.post("/", async (req, res, next) => {
   try {
-    const {
+    let {
       salaryStructureId,
       name,
       code,
@@ -40,8 +40,29 @@ salaryRuleRouter.post("/", async (req, res, next) => {
       isActive,
     } = req.body;
 
-    if (!salaryStructureId || !name || !code || !category || sequence === undefined || !computationType || computationValue === undefined) {
-      return res.status(400).json({ error: true, message: "Missing required salary rule fields" });
+    if (!salaryStructureId) {
+      const struct = await prisma.salaryStructure.findFirst();
+      salaryStructureId = struct?.id;
+    }
+
+    if (!salaryStructureId || !name) {
+      return res.status(400).json({ error: true, message: "salaryStructureId and name are required" });
+    }
+
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "_");
+    }
+    if (!category) {
+      category = "ALLOWANCE";
+    }
+    if (sequence === undefined) {
+      sequence = 10;
+    }
+    if (!computationType) {
+      computationType = "FIXED_AMOUNT";
+    }
+    if (computationValue === undefined) {
+      computationValue = "0";
     }
 
     const rule = await prisma.salaryRule.create({

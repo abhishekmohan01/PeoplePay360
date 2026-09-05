@@ -10,7 +10,7 @@ employeeRouter.use(authenticateJWT);
 // GET /api/employees - list employees with search and filters
 employeeRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, departmentId, status, search } = req.query;
+    const { companyId, departmentId, status, search, limit, offset } = req.query;
     const where: any = {};
 
     if (companyId) where.companyId = String(companyId);
@@ -48,6 +48,8 @@ employeeRouter.get("/", async (req, res, next) => {
         },
       },
       orderBy: { employeeCode: "asc" },
+      ...(limit ? { take: Math.min(Number(limit), 100) } : {}),
+      ...(offset ? { skip: Number(offset) } : {}),
     });
 
     return res.json(employees);
@@ -59,7 +61,7 @@ employeeRouter.get("/", async (req, res, next) => {
 // POST /api/employees - create employee
 employeeRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
   try {
-    const {
+    let {
       companyId,
       departmentId,
       managerId,
@@ -76,15 +78,48 @@ employeeRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
       bankIdentifierCode,
     } = req.body;
 
-    if (!companyId || !departmentId || !employeeCode || !firstName || !lastName || !jobPosition || !employeeType) {
-      return res.status(400).json({ error: true, message: "Missing required employee fields" });
+    if (!departmentId || !firstName || !lastName || !jobPosition) {
+      return res.status(400).json({ error: true, message: "Missing required employee fields: firstName, lastName, jobPosition, and departmentId" });
+    }
+
+    // Auto-resolve companyId from department if not directly provided
+    if (!companyId && departmentId) {
+      const dept = await prisma.department.findUnique({ where: { id: departmentId } });
+      if (dept) companyId = dept.companyId;
+    }
+    if (!companyId) {
+      const firstComp = await prisma.company.findFirst();
+      if (firstComp) companyId = firstComp.id;
+    }
+
+    if (!companyId) {
+      return res.status(400).json({ error: true, message: "Unable to associate employee with a company" });
+    }
+
+    // Auto-generate employeeCode if omitted
+    let targetCode = (employeeCode || '').trim();
+    if (!targetCode) {
+      const count = await prisma.employee.count({ where: { companyId } });
+      targetCode = `EMP-${String(count + 1).padStart(3, '0')}`;
+    }
+
+    // Normalize employeeType
+    let normalizedType = (employeeType || 'FULL_TIME').toString().toUpperCase().replace(/\s+/g, '_');
+    if (!['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'].includes(normalizedType)) {
+      normalizedType = 'FULL_TIME';
+    }
+
+    // Normalize status
+    let normalizedStatus = (status || 'ACTIVE').toString().toUpperCase();
+    if (!['ACTIVE', 'INACTIVE', 'TERMINATED'].includes(normalizedStatus)) {
+      normalizedStatus = 'ACTIVE';
     }
 
     const existingCode = await prisma.employee.findUnique({
-      where: { companyId_employeeCode: { companyId, employeeCode } },
+      where: { companyId_employeeCode: { companyId, employeeCode: targetCode } },
     });
     if (existingCode) {
-      return res.status(400).json({ error: true, message: "Employee code already exists in this company" });
+      return res.status(400).json({ error: true, message: `Employee code '${targetCode}' already exists in this company` });
     }
 
     const employee = await prisma.employee.create({
@@ -92,17 +127,17 @@ employeeRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
         companyId,
         departmentId,
         managerId: managerId || null,
-        employeeCode,
-        firstName,
-        lastName,
-        workEmail,
-        workPhone,
-        jobPosition,
-        employeeType,
-        status: status || "ACTIVE",
-        bankAccountNumber,
-        bankName,
-        bankIdentifierCode,
+        employeeCode: targetCode,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        workEmail: workEmail?.trim() || null,
+        workPhone: workPhone?.trim() || null,
+        jobPosition: jobPosition.trim(),
+        employeeType: normalizedType as any,
+        status: normalizedStatus as any,
+        bankAccountNumber: bankAccountNumber?.trim() || null,
+        bankName: bankName?.trim() || null,
+        bankIdentifierCode: bankIdentifierCode?.trim() || null,
       },
       include: {
         department: true,
@@ -119,6 +154,10 @@ employeeRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
 // GET /api/employees/:id - full employee detail with smart button counts
 employeeRouter.get("/:id", async (req, res, next) => {
   try {
+    const id = req.params.id as string;
+    if (!id || id === 'new') {
+      return res.status(404).json({ error: true, message: "Employee not found" });
+    }
     const employee = await prisma.employee.findUnique({
       where: { id: req.params.id as string },
       include: {
@@ -135,6 +174,18 @@ employeeRouter.get("/:id", async (req, res, next) => {
           include: {
             salaryStructure: { select: { id: true, name: true, code: true } },
             workingSchedule: { select: { id: true, name: true } },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            status: true,
+            roles: {
+              include: {
+                role: true,
+              },
+            },
           },
         },
         _count: {
@@ -160,7 +211,7 @@ employeeRouter.get("/:id", async (req, res, next) => {
 });
 
 // PATCH /api/employees/:id - update employee
-employeeRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) => {
+employeeRouter.patch("/:id", requireRoles("HR_MANAGER", "ADMIN"), async (req, res, next) => {
   try {
     const {
       departmentId,
@@ -177,24 +228,42 @@ employeeRouter.patch("/:id", requireRoles("HR_MANAGER"), async (req, res, next) 
       bankIdentifierCode,
     } = req.body;
 
+    let normalizedType: any = undefined;
+    if (employeeType) {
+      normalizedType = employeeType.toString().toUpperCase().replace(/\s+/g, '_');
+      if (!['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'].includes(normalizedType)) {
+        normalizedType = 'FULL_TIME';
+      }
+    }
+
+    let normalizedStatus: any = undefined;
+    if (status) {
+      normalizedStatus = status.toString().toUpperCase();
+      if (!['ACTIVE', 'INACTIVE', 'TERMINATED'].includes(normalizedStatus)) {
+        normalizedStatus = 'ACTIVE';
+      }
+    }
+
+    const updateData: any = {};
+    if (departmentId !== undefined) updateData.departmentId = departmentId;
+    if (managerId !== undefined) updateData.managerId = managerId || null;
+    if (firstName !== undefined) updateData.firstName = firstName.trim();
+    if (lastName !== undefined) updateData.lastName = lastName.trim();
+    if (workEmail !== undefined) updateData.workEmail = workEmail?.trim() || null;
+    if (workPhone !== undefined) updateData.workPhone = workPhone?.trim() || null;
+    if (jobPosition !== undefined) updateData.jobPosition = jobPosition.trim();
+    if (normalizedType !== undefined) updateData.employeeType = normalizedType;
+    if (normalizedStatus !== undefined) updateData.status = normalizedStatus;
+    if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber?.trim() || null;
+    if (bankName !== undefined) updateData.bankName = bankName?.trim() || null;
+    if (bankIdentifierCode !== undefined) updateData.bankIdentifierCode = bankIdentifierCode?.trim() || null;
+
     const updated = await prisma.employee.update({
       where: { id: req.params.id as string },
-      data: {
-        departmentId,
-        managerId: managerId !== undefined ? managerId : undefined,
-        firstName,
-        lastName,
-        workEmail,
-        workPhone,
-        jobPosition,
-        employeeType,
-        status,
-        bankAccountNumber,
-        bankName,
-        bankIdentifierCode,
-      },
+      data: updateData,
       include: {
         department: true,
+        company: true,
         manager: true,
       },
     });

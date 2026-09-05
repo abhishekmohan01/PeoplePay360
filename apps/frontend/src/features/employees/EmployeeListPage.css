@@ -1,7 +1,10 @@
 .emp-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  padding: 0.5rem 1.5rem 2rem 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .emp-toolbar {
@@ -9,18 +12,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .emp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1rem;
 }
 
 .emp-loading, .emp-error, .emp-empty {
   text-align: center;
-  padding: var(--sp-10);
-  font-family: var(--font-handwritten);
+  padding: 3rem 1rem;
+  font-family: var(--font-primary);
+  font-size: 0.9375rem;
   color: var(--text-secondary);
 }
 

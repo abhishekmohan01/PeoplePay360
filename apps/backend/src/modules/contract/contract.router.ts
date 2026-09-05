@@ -59,8 +59,41 @@ contractRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
       status,
     } = req.body;
 
-    if (!companyId || !employeeId || !departmentId || !startDate || !wage || !workingScheduleId || !salaryStructureId) {
-      return res.status(400).json({ error: true, message: "Missing required contract fields" });
+    let targetCompanyId = companyId || req.user?.companyId;
+    let targetDepartmentId = departmentId;
+    let targetScheduleId = workingScheduleId;
+    let targetStructureId = salaryStructureId;
+
+    if (employeeId) {
+      const emp = await prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { companyId: true, departmentId: true },
+      });
+      if (emp) {
+        if (!targetCompanyId) targetCompanyId = emp.companyId;
+        if (!targetDepartmentId) targetDepartmentId = emp.departmentId;
+      }
+    }
+
+    if (!targetCompanyId) {
+      const comp = await prisma.company.findFirst();
+      if (comp) targetCompanyId = comp.id;
+    }
+    if (!targetDepartmentId) {
+      const dept = await prisma.department.findFirst();
+      if (dept) targetDepartmentId = dept.id;
+    }
+    if (!targetScheduleId) {
+      const sched = await prisma.workingSchedule.findFirst();
+      if (sched) targetScheduleId = sched.id;
+    }
+    if (!targetStructureId) {
+      const struct = await prisma.salaryStructure.findFirst();
+      if (struct) targetStructureId = struct.id;
+    }
+
+    if (!targetCompanyId || !employeeId || !targetDepartmentId || !startDate || !wage || !targetScheduleId || !targetStructureId) {
+      return res.status(400).json({ error: true, message: "Missing required contract fields: employee, startDate, wage" });
     }
 
     const contractStatus = status || "RUNNING";

@@ -109,3 +109,41 @@ export async function getTimeOffAllocations(params?: {
     unit: a.timeOffType?.unit || 'DAYS',
   }));
 }
+
+export interface TimeOffType {
+  id: string;
+  name: string;
+  unit: string;
+  requiresAllocation: boolean;
+  approvalRequired: boolean;
+  payrollWorkEntry: boolean;
+  displayColor?: string;
+  configurationNotes?: string;
+}
+
+export async function getTimeOffTypes(): Promise<TimeOffType[]> {
+  return apiClient.get<TimeOffType[]>('/time-off/types');
+}
+
+export async function createTimeOffRequest(data: {
+  employeeId?: string;
+  timeOffTypeId: string;
+  startDate: string;
+  endDate: string;
+  duration: number;
+  reason?: string;
+}): Promise<any> {
+  return apiClient.post('/time-off/requests', data);
+}
+
+export async function createTimeOffAllocation(data: {
+  employeeId: string;
+  timeOffTypeId: string;
+  allocated: number;
+  validityStart: string;
+  validityEnd?: string;
+  description?: string;
+}): Promise<any> {
+  return apiClient.post('/time-off/allocations', data);
+}
+

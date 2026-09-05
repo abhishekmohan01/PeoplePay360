@@ -5,6 +5,8 @@ import {
   getAttendanceStatus,
   checkIn,
   checkOut,
+  updateAttendanceRecord,
+  createAttendanceRecord,
   type AttendanceRecord,
   type AttendanceStatusResponse,
 } from '../../api/attendance';
@@ -53,3 +55,37 @@ export function useCheckOut() {
     },
   });
 }
+
+export function useUpdateAttendanceRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      updateAttendanceRecord(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-status'] });
+    },
+  });
+}
+
+export function useCreateAttendanceRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      employeeId: string;
+      checkIn: string;
+      checkOut?: string | null;
+      workedHours?: number;
+      overtime?: number;
+      status?: string;
+      notes?: string;
+    }) => createAttendanceRecord(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-status'] });
+    },
+  });
+}
+
+

@@ -106,6 +106,11 @@ payrunRouter.post("/", async (req, res, next) => {
       companyId = comp?.id;
     }
 
+    if (!salaryStructureId) {
+      const struct = await prisma.salaryStructure.findFirst();
+      salaryStructureId = struct?.id;
+    }
+
     if (!salaryStructureId || !name || !periodStart || !periodEnd) {
       return res.status(400).json({ error: true, message: "Missing required payrun parameters (name, periodStart, periodEnd, salaryStructureId)" });
     }
@@ -116,6 +121,22 @@ payrunRouter.post("/", async (req, res, next) => {
         select: { employeeId: true },
       });
       employeeIds = eligibleContracts.map((c) => c.employeeId);
+
+      if (employeeIds.length === 0) {
+        const anyRunning = await prisma.contract.findMany({
+          where: { status: "RUNNING" },
+          select: { employeeId: true },
+        });
+        employeeIds = anyRunning.map((c) => c.employeeId);
+      }
+
+      if (employeeIds.length === 0) {
+        const activeEmps = await prisma.employee.findMany({
+          where: { status: "ACTIVE" },
+          select: { id: true },
+        });
+        employeeIds = activeEmps.map((e) => e.id);
+      }
     }
 
     if (!employeeIds || employeeIds.length === 0) {

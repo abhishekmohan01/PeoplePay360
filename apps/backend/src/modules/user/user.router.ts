@@ -20,8 +20,8 @@ userRouter.get("/roles", async (_req, res, next) => {
   }
 });
 
-// All user management routes below require ADMIN
-userRouter.use(requireRoles("ADMIN"));
+// User management routes require ADMIN or HR_MANAGER
+userRouter.use(requireRoles("ADMIN", "HR_MANAGER"));
 
 // GET /api/users - list users
 userRouter.get("/", async (req, res, next) => {

@@ -1,0 +1,319 @@
+/* ============================================================
+   EmployeeSearchSelect — debounced server-side search widget
+   ============================================================ */
+
+/* ── Root ────────────────────────────────────────────────────── */
+.emp-search-root {
+  width: 100%;
+  position: relative;
+}
+
+/* ── Input wrapper ───────────────────────────────────────────── */
+.emp-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+.emp-search-input-wrap:focus-within {
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #6366f1) 18%, transparent);
+}
+
+.emp-search-icon {
+  color: var(--color-text-muted, #94a3b8);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.emp-search-input-wrap:focus-within .emp-search-icon {
+  color: var(--color-primary, #6366f1);
+}
+
+.emp-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary, #0f172a);
+  min-width: 0;
+}
+
+.emp-search-input::placeholder {
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.emp-search-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.emp-search-hint {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.emp-search-clear-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-text-muted, #94a3b8);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.emp-search-clear-input:hover {
+  background: #64748b;
+}
+
+/* ── Selected chip ───────────────────────────────────────────── */
+.emp-search-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, var(--color-surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--color-primary, #6366f1) 30%, transparent);
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+.emp-search-chip:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #6366f1) 55%, transparent);
+}
+
+.emp-search-chip-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.emp-search-chip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.emp-search-chip-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emp-search-chip-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emp-search-chip-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.emp-search-chip-clear:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+/* ── Floating panel (portal) ─────────────────────────────────── */
+.emp-search-panel {
+  position: fixed;
+  z-index: 99999;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.07);
+  overflow: hidden;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  animation: emp-search-appear 0.14s cubic-bezier(0.22,1,0.36,1);
+}
+
+@keyframes emp-search-appear {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── State messages (loading / empty) ────────────────────────── */
+.emp-search-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.emp-search-state--empty {
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+
+.emp-search-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border, #e2e8f0);
+  border-top-color: var(--color-primary, #6366f1);
+  border-radius: 50%;
+  animation: emp-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes emp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Result items ────────────────────────────────────────────── */
+.emp-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.09s;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.emp-search-item:last-of-type {
+  border-bottom: none;
+}
+
+.emp-search-item:hover,
+.emp-search-item--active {
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 7%, transparent);
+}
+
+.emp-search-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 15%, transparent);
+  color: var(--color-primary, #6366f1);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.emp-search-item--active .emp-search-avatar {
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+}
+
+.emp-search-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.emp-search-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.emp-search-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.emp-search-status {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.emp-search-status--active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.emp-search-status--inactive {
+  background: rgba(148, 163, 184, 0.15);
+  color: #64748b;
+}
+
+.emp-search-status--terminated {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.emp-search-footer {
+  padding: 6px 14px;
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #94a3b8);
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-elevated, #f8fafc);
+  flex-shrink: 0;
+}

@@ -3,18 +3,18 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
-  background-color: var(--nav-active-bg);
-  color: var(--nav-active);
-  font-family: var(--font-handwritten);
-  font-weight: var(--fw-bold);
+  background: linear-gradient(135deg, var(--nav-active-bg), var(--elevated));
+  color: var(--primary);
+  font-family: var(--font-primary);
+  font-weight: 600;
   overflow: hidden;
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.avatar-sm { width: 32px; height: 32px; font-size: var(--text-xs); }
-.avatar-md { width: 48px; height: 48px; font-size: var(--text-md); }
-.avatar-lg { width: 80px; height: 80px; font-size: var(--text-xl); }
+.avatar-sm { width: 32px; height: 32px; font-size: 0.75rem; }
+.avatar-md { width: 44px; height: 44px; font-size: 0.875rem; }
+.avatar-lg { width: 72px; height: 72px; font-size: 1.25rem; }
 
 .avatar-img {
   width: 100%;
@@ -24,4 +24,5 @@
 
 .avatar-initials {
   line-height: 1;
+  letter-spacing: 0.02em;
 }

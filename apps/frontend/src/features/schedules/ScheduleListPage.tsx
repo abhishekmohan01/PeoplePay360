@@ -1,41 +1,202 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSchedules } from './useSchedules';
+import { ScheduleModal } from './ScheduleModal';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { SearchInput } from '../../components/ui/SearchInput';
 import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import './ScheduleListPage.css';
+import { Plus, Clock, Users, Calendar, Globe, Edit2 } from 'lucide-react';
+import { type Schedule } from '../../api/schedules';
 
-export const ScheduleListPage = () => {
+export const ScheduleListPage: React.FC = () => {
+  const navigate = useNavigate();
   const { data: schedules, isLoading } = useSchedules();
+  const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
+
+  const totalSchedules = schedules?.length || 0;
+  const standardSchedules = schedules?.filter((s) => s.hoursPerWeek >= 40).length || 0;
+  const totalAssignedStaff = schedules?.reduce((sum, s) => sum + (s.assignedEmployees || 0), 0) || 0;
+
+  const filtered = schedules?.filter((s) => {
+    const q = search.toLowerCase();
+    return (
+      !q ||
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.type || '').toLowerCase().includes(q)
+    );
+  });
+
+  const handleOpenCreate = () => {
+    setScheduleToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (schedule: Schedule) => {
+    setScheduleToEdit(schedule);
+    setIsModalOpen(true);
+  };
 
   return (
-    <div className="schedule-page">
+    <div className="flex flex-col max-w-6xl mx-auto w-full p-4 sm:p-6 pb-12">
       <PageHeader 
         title="Working Schedules" 
-        subtitle="Configure work hours and shifts"
-        actions={<Button variant="primary">New Schedule</Button>}
+        subtitle="Configure weekly working hours, rotational shifts, and policy assignments"
+        actions={
+          <Button variant="primary" onClick={handleOpenCreate}>
+            <Plus size={16} />
+            <span>New Schedule</span>
+          </Button>
+        }
       />
 
-      {isLoading && <div className="schedule-loading">Loading schedules...</div>}
+      {/* Interactive KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div 
+          onClick={() => setSearch('')}
+          className="bg-surface border border-border hover:border-primary/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
+          title="Click to view all working schedules"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Total Schedules</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock size={16} />
+            </div>
+          </div>
+          <div className="text-2xl font-heading font-bold text-text-primary">
+            {totalSchedules}
+          </div>
+          <div className="text-[11px] text-text-muted mt-1 truncate">
+            Operational shift policies
+          </div>
+        </div>
 
-      <div className="schedule-list">
-        {schedules?.map(schedule => (
-          <Card key={schedule.id} className="schedule-card">
-            <div className="schedule-header">
-              <h3>{schedule.name}</h3>
-              <StatusBadge status={schedule.status} />
+        <div 
+          onClick={() => setSearch('Fixed')}
+          className="bg-surface border border-border hover:border-emerald-500/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
+          title="Click to filter by standard 40h schedules"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Standard Shifts (40h)</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Calendar size={16} />
             </div>
-            <div className="schedule-details">
-              <div><span className="schedule-label">Type:</span> {schedule.type}</div>
-              <div><span className="schedule-label">Hours/Week:</span> {schedule.hoursPerWeek}h</div>
-              <div><span className="schedule-label">Assigned:</span> {schedule.assignedEmployees} employees</div>
+          </div>
+          <div className="text-2xl font-heading font-bold text-emerald-500">
+            {standardSchedules}
+          </div>
+          <div className="text-[11px] text-text-muted mt-1 truncate">
+            Standard full-time workforce shifts
+          </div>
+        </div>
+
+        <div 
+          onClick={() => navigate('/employees')}
+          className="bg-surface border border-border hover:border-indigo-500/40 rounded-xl p-4 shadow-xs transition-all hover:scale-[1.01] cursor-pointer group select-none"
+          title="Click to view workforce directory"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Assigned Staff</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Users size={16} />
             </div>
-            <div className="schedule-actions">
-              <Button variant="secondary" size="sm">Edit</Button>
+          </div>
+          <div className="text-2xl font-heading font-bold text-text-primary">
+            {totalAssignedStaff}
+          </div>
+          <div className="text-[11px] text-text-muted mt-1 truncate">
+            View employee assignments ➔
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="w-full sm:w-80 mb-6">
+        <SearchInput 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search schedules by name or type..."
+        />
+      </div>
+
+      {isLoading && (
+        <div className="p-12 text-center text-text-muted text-sm font-medium">
+          Loading working schedules...
+        </div>
+      )}
+
+      {/* Schedule Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered?.map((schedule) => (
+          <div 
+            key={schedule.id} 
+            className="bg-surface border border-border hover:border-primary/40 rounded-xl p-5 shadow-xs transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-base font-heading font-bold text-text-primary group-hover:text-primary transition-colors m-0">
+                    {schedule.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted mt-1">
+                    <Globe size={13} />
+                    <span>{schedule.timezone || 'Asia/Kolkata'}</span>
+                  </div>
+                </div>
+                <StatusBadge status={schedule.status} />
+              </div>
+              
+              <div className="space-y-2 py-3 border-y border-border/50 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-text-muted">Shift Type:</span>
+                  <span className="font-semibold text-text-primary flex items-center gap-1">
+                    <Calendar size={13} className="text-primary" /> {schedule.type}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-text-muted">Hours / Week:</span>
+                  <span className="font-semibold text-text-primary flex items-center gap-1">
+                    <Clock size={13} className="text-primary" /> {schedule.hoursPerWeek}h
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-text-muted">Assigned Workforce:</span>
+                  <span className="font-semibold text-text-primary flex items-center gap-1">
+                    <Users size={13} className="text-primary" /> {schedule.assignedEmployees} employees
+                  </span>
+                </div>
+              </div>
             </div>
-          </Card>
+
+            <div className="mt-4 pt-3 flex items-center justify-end gap-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={() => handleOpenEdit(schedule)}
+                className="w-full flex items-center justify-center gap-1.5"
+              >
+                <Edit2 size={13} />
+                <span>Edit Schedule</span>
+              </Button>
+            </div>
+          </div>
         ))}
       </div>
+
+      {!isLoading && (!filtered || filtered.length === 0) && (
+        <div className="p-12 text-center text-text-muted text-sm bg-surface border border-border rounded-xl">
+          No working schedules found matching "{search}".
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      <ScheduleModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        scheduleToEdit={scheduleToEdit}
+      />
     </div>
   );
 };

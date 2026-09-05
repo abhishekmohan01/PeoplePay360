@@ -1,12 +1,14 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { AttendanceWidget } from './AttendanceWidget';
 import { useAuthStore } from '../../stores/auth.store';
+import { LogOut, Settings, ChevronDown, Users } from 'lucide-react';
 import './TopNav.css';
 
 export const TopNav = () => {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
   
   const isAdmin = useAuthStore((state) => state.isAdmin)();
   const isHR = useAuthStore((state) => state.canManageHR)();
@@ -18,7 +20,10 @@ export const TopNav = () => {
   return (
     <nav className="topnav">
       <div className="topnav-brand">
-        <span className="topnav-logo">HR</span>
+        <div className="topnav-logo-icon">P</div>
+        <span className="topnav-brand-text hidden md:inline">
+          PeoplePay<span>360</span>
+        </span>
       </div>
 
       <div className="topnav-links">
@@ -53,7 +58,7 @@ export const TopNav = () => {
           </NavLink>
         )}
 
-        {/* Attendance - Available to everyone (employees see self-scoped) */}
+        {/* Attendance - Available to everyone */}
         <NavLink to="/attendance" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
           {isEmployeeOnly ? 'My Attendance' : 'Attendance'}
         </NavLink>
@@ -84,33 +89,48 @@ export const TopNav = () => {
           </NavLink>
         )}
 
-        {/* Users - Admin only */}
-        {isAdmin && (
-          <NavLink to="/users" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-            Users
-          </NavLink>
+        {/* Settings dropdown — Admin & HR Manager only */}
+        {(isAdmin || isHR) && (
+          <div className="nav-dropdown-root">
+            <button className="nav-link nav-dropdown-trigger" type="button">
+              <Settings size={13} />
+              <span>Settings</span>
+              <ChevronDown size={11} className="nav-dropdown-chevron" />
+            </button>
+            <div className="nav-dropdown-menu">
+              <button
+                type="button"
+                className="nav-dropdown-item"
+                onClick={() => navigate('/users')}
+              >
+                <Users size={13} />
+                <span>Users &amp; Access</span>
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="topnav-actions flex items-center gap-3">
+      <div className="topnav-actions">
         {/* Quick-action attendance widget */}
         <AttendanceWidget />
 
         {/* Current User Role Pill */}
         {user && (
-          <div className="hidden lg:flex flex-col text-right font-sans">
-            <span className="text-xs font-bold text-text-primary leading-tight">
+          <div className="hidden lg:flex flex-col text-right">
+            <span className="text-xs font-semibold text-text-primary leading-tight">
               {user.name || user.email}
             </span>
-            <span className="text-[10px] text-accent uppercase tracking-wider font-semibold">
-              {primaryRole}
+            <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">
+              {primaryRole.replace('_', ' ')}
             </span>
           </div>
         )}
 
         <ThemeToggle />
-        <button className="nav-logout-btn font-[Caveat] text-lg font-bold cursor-pointer" onClick={logout}>
-          Logout
+        <button className="nav-logout-btn" onClick={logout} title="Sign Out">
+          <LogOut size={14} />
+          <span className="hidden sm:inline">Logout</span>
         </button>
       </div>
     </nav>

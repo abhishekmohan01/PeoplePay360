@@ -1,32 +1,38 @@
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: var(--sp-6);
-  padding-bottom: var(--sp-4);
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .page-header-content {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
+  gap: 0.25rem;
 }
 
 .page-header-title {
   margin: 0;
-  line-height: 1.1;
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 
 .page-header-subtitle {
   margin: 0;
-  font-size: var(--text-md);
+  font-size: 0.875rem;
+  font-weight: 400;
   color: var(--text-secondary);
 }
 
 .page-header-actions {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  gap: 0.75rem;
 }

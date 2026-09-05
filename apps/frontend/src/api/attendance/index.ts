@@ -131,3 +131,33 @@ export async function checkIn(params?: {
 export async function checkOut(): Promise<any> {
   return apiClient.post('/attendance/check-out');
 }
+
+export async function updateAttendanceRecord(
+  id: string,
+  data: {
+    checkIn?: string;
+    checkOut?: string | null;
+    workedHours?: number;
+    overtime?: number;
+    status?: string;
+    notes?: string;
+  }
+): Promise<AttendanceRecord> {
+  const updated = await apiClient.patch<any>(`/attendance/${id}`, data);
+  return normalizeRecord(updated);
+}
+
+export async function createAttendanceRecord(data: {
+  employeeId: string;
+  checkIn: string;
+  checkOut?: string | null;
+  workedHours?: number;
+  overtime?: number;
+  status?: string;
+  notes?: string;
+}): Promise<AttendanceRecord> {
+  const created = await apiClient.post<any>('/attendance', data);
+  return normalizeRecord(created);
+}
+
+

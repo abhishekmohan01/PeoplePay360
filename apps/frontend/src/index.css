@@ -1,11 +1,15 @@
 @import './styles/tokens.css';
 
 /* ============================================================
-   PeoplePay360 — Global Styles
+   PeoplePay360 — Modern Enterprise Global Styles
    ============================================================ */
 
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
 }
 
 body {
@@ -14,35 +18,96 @@ body {
   background-color: var(--bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-handwritten);
+  font-family: var(--font-heading);
   font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
   margin-top: 0;
 }
 
 p {
   margin-top: 0;
+  color: var(--text-secondary);
 }
 
 button, input, select, textarea {
-  font-family: inherit;
+  font-family: var(--font-primary);
 }
 
-/* Scrollbar styling for that sketch aesthetic */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Subtle modern scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg); 
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border); 
-  border-radius: 4px;
+  background: var(--border);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted); 
+  background: var(--text-muted);
 }
+
+/* Enterprise Data Table Base */
+.table-enterprise {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.table-enterprise th {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background-color: var(--elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.table-enterprise td {
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--transition-fast);
+}
+
+.table-enterprise tr:last-child td {
+  border-bottom: none;
+}
+
+.table-enterprise tbody tr:hover td {
+  background-color: var(--elevated);
+}
+
+/* Direct Semantic Utilities for 100% Theme Cascade */
+.bg-surface { background-color: var(--surface) !important; }
+.bg-elevated { background-color: var(--elevated) !important; }
+.bg-primary { background-color: var(--primary) !important; }
+.bg-primary-light { background-color: var(--primary-light) !important; }
+.border-border { border-color: var(--border) !important; }
+.border-border-subtle { border-color: var(--border-subtle) !important; }
+.border-primary { border-color: var(--primary) !important; }
+.text-text-primary { color: var(--text-primary) !important; }
+.text-text-secondary { color: var(--text-secondary) !important; }
+.text-text-muted { color: var(--text-muted) !important; }
+.text-primary { color: var(--primary) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-error { color: var(--error) !important; }

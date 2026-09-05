@@ -53,13 +53,24 @@ workingScheduleRouter.get("/:id", async (req, res, next) => {
 
 workingScheduleRouter.post("/", requireRoles("HR_MANAGER"), async (req, res, next) => {
   try {
-    const { companyId, name, timezone, days } = req.body;
+    let { companyId, name, timezone, days } = req.body;
+
+    if (!companyId) {
+      const comp = await prisma.company.findFirst();
+      companyId = comp?.id;
+    }
 
     if (!companyId || !name) {
       return res.status(400).json({ error: true, message: "companyId and name are required" });
     }
 
-    const daysList: any[] = Array.isArray(days) ? days : [];
+    const daysList: any[] = Array.isArray(days) && days.length > 0 ? days : [
+      { dayOfWeek: 1, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
+      { dayOfWeek: 2, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
+      { dayOfWeek: 3, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
+      { dayOfWeek: 4, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
+      { dayOfWeek: 5, startTime: "09:00:00", endTime: "18:00:00", breakMinutes: 60, hours: 8 },
+    ];
     const totalHours = daysList.reduce((sum, d) => sum + (Number(d.hours) || 0), 0);
     const totalDays = daysList.length;
 

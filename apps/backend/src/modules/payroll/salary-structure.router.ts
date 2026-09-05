@@ -60,10 +60,19 @@ salaryStructureRouter.get("/:id", async (req, res, next) => {
 // POST /api/salary-structures
 salaryStructureRouter.post("/", async (req, res, next) => {
   try {
-    const { companyId, name, code, description, isActive } = req.body;
+    let { companyId, name, code, description, isActive } = req.body;
 
-    if (!companyId || !name || !code) {
-      return res.status(400).json({ error: true, message: "companyId, name, and code are required" });
+    if (!companyId) {
+      const comp = await prisma.company.findFirst();
+      companyId = comp?.id;
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: true, message: "name is required" });
+    }
+
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "_");
     }
 
     const structure = await prisma.salaryStructure.create({

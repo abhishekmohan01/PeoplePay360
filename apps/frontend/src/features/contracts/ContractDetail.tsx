@@ -1,64 +1,105 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useContract } from './useContracts';
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { ArrowLeft, FileText, Calendar, Building, DollarSign, Clock } from 'lucide-react';
 
 export const ContractDetail = () => {
   const { contractId } = useParams();
+  const navigate = useNavigate();
   const { data: contract, isLoading, isError } = useContract(contractId!);
 
-  if (isLoading) return <div className="p-8 text-center font-[Caveat] text-muted text-xl">Loading contract...</div>;
-  if (isError || !contract) return <div className="p-8 text-center font-[Caveat] text-muted text-xl">Failed to load contract</div>;
+  if (isLoading) return <div className="p-12 text-center text-text-muted text-sm font-medium">Loading contract details...</div>;
+  if (isError || !contract) return <div className="p-12 text-center text-error text-sm font-medium">Failed to load contract.</div>;
 
   return (
-    <div className="flex flex-col h-full font-primary max-w-5xl mx-auto w-full p-4 mt-4">
+    <div className="flex flex-col max-w-5xl mx-auto w-full p-4 sm:p-6 pb-12">
       
-      {/* Top Header */}
-      <div className="mb-10">
-        <h1 className="text-4xl font-[Caveat] font-bold m-0 text-text-primary uppercase tracking-wide">
-          Contract / {contract.contractNumber || contract.id}
-        </h1>
-        <p className="text-muted m-0 mt-2 font-[Caveat] text-xl">Form view of one contract</p>
+      {/* Back button */}
+      <div className="mb-3">
+        <button
+          onClick={() => navigate('/contracts')}
+          className="text-xs font-semibold text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={14} /> <span>Back to Contracts</span>
+        </button>
       </div>
 
-      {/* Form Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-4xl font-[Caveat] text-xl mb-12">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border mb-6">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-text-primary m-0">
+              Contract {contract.contractNumber || contract.id}
+            </h1>
+            <StatusBadge status={contract.status === 'RUNNING' ? 'Active' : contract.status} />
+          </div>
+          <p className="text-xs text-text-secondary m-0 mt-1">
+            Official employment contract for <span className="font-semibold text-text-primary">{contract.employeeName}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Form Fields Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Left Column */}
-        <div className="flex flex-col gap-8">
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Employee</label>
-            <input type="text" readOnly value={contract.employeeName} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+        {/* Terms */}
+        <div className="bg-surface border border-border rounded-xl p-5 shadow-xs flex flex-col gap-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted m-0 pb-2 border-b border-border flex items-center gap-1.5">
+            <Calendar size={14} className="text-primary" /> Contract Terms
+          </h3>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Employee Name</label>
+            <div className="text-sm font-semibold text-text-primary">{contract.employeeName}</div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Start Date</label>
-            <input type="text" readOnly value={contract.startDate} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Start Date</label>
+            <div className="text-sm font-semibold text-text-primary">{contract.startDate}</div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">End Date</label>
-            <input type="text" readOnly value={contract.endDate || '—'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">End Date</label>
+            <div className="text-sm font-semibold text-text-primary">{contract.endDate || '— Permanent Agreement'}</div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Status</label>
-            <input type="text" readOnly value={contract.status === 'RUNNING' || contract.status === 'Active' ? 'Running' : contract.status} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Working Schedule</label>
+            <div className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+              <Clock size={14} className="text-text-muted" />
+              {contract.scheduleName || contract.workingSchedule?.name || 'Standard 40h Full-Time'}
+            </div>
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="flex flex-col gap-8">
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Department</label>
-            <input type="text" readOnly value={contract.departmentName || contract.department?.name || 'General'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+        {/* Compensation & Role */}
+        <div className="bg-surface border border-border rounded-xl p-5 shadow-xs flex flex-col gap-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted m-0 pb-2 border-b border-border flex items-center gap-1.5">
+            <DollarSign size={14} className="text-primary" /> Compensation & Role
+          </h3>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Assigned Department</label>
+            <div className="text-sm font-semibold text-text-primary">{contract.departmentName || contract.department?.name || 'General'}</div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Job Position</label>
-            <input type="text" readOnly value={contract.jobPosition || 'Staff'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Job Position</label>
+            <div className="text-sm font-semibold text-text-primary">{contract.jobPosition || 'Staff Member'}</div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Wage / Month</label>
-            <input type="text" readOnly value={`₹${contract.salary.toLocaleString()}`} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Agreed Monthly Base Wage</label>
+            <div className="text-lg font-bold text-emerald-500 tabular-nums">
+              ₹{contract.salary.toLocaleString()}
+            </div>
           </div>
-          <div className="flex items-center">
-            <label className="w-40 text-muted">Working Schedule</label>
-            <input type="text" readOnly value={contract.scheduleName || contract.workingSchedule?.name || 'Standard 40h'} className="flex-1 border border-border/80 rounded-xl px-4 py-2 bg-surface text-text-primary focus:outline-none" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-text-muted">Contract Status</label>
+            <div>
+              <StatusBadge status={contract.status === 'RUNNING' ? 'Active' : contract.status} />
+            </div>
           </div>
         </div>
 

@@ -67,7 +67,31 @@ export async function getSalaryStructures(): Promise<SalaryStructure[]> {
   return data.map(normalizeStructure);
 }
 
+export async function createSalaryStructure(data: {
+  name: string;
+  code?: string;
+  description?: string;
+  isActive?: boolean;
+}): Promise<SalaryStructure> {
+  const created = await apiClient.post<any>('/salary-structures', data);
+  return normalizeStructure(created);
+}
+
 export async function getPayrollRules(): Promise<PayrollRule[]> {
   const data = await apiClient.get<any[]>('/salary-rules');
   return data.map(normalizeRule);
 }
+
+export async function createSalaryRule(data: {
+  salaryStructureId?: string;
+  name: string;
+  code?: string;
+  category: string;
+  sequence?: number;
+  computationType: string;
+  computationValue: string;
+}): Promise<PayrollRule> {
+  const created = await apiClient.post<any>('/salary-rules', data);
+  return normalizeRule(created);
+}
+

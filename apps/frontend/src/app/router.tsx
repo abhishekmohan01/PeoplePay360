@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { AppShell } from '../components/ui/AppShell';
 import { LoginPage } from '../features/auth/LoginPage';
 import { EmployeeListPage } from '../features/employees/EmployeeListPage';
+import { NewEmployeePage } from '../features/employees/NewEmployeePage';
 import { EmployeeDetail } from '../features/employees/EmployeeDetail';
 import { ContractListPage } from '../features/contracts/ContractListPage';
 import { ContractDetail } from '../features/contracts/ContractDetail';
@@ -80,6 +81,14 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute><AppShell><EmployeeListPage /></AppShell></ProtectedRoute>,
   },
   {
+    path: '/employees/new',
+    element: (
+      <RoleRoute allowedRoles={['HR_MANAGER', 'ADMIN']}>
+        <AppShell><NewEmployeePage /></AppShell>
+      </RoleRoute>
+    ),
+  },
+  {
     path: '/employees/:employeeId',
     element: <ProtectedRoute><AppShell><EmployeeDetail /></AppShell></ProtectedRoute>,
   },
@@ -154,7 +163,7 @@ export const router = createBrowserRouter([
   {
     path: '/users',
     element: (
-      <RoleRoute allowedRoles={['ADMIN']}>
+      <RoleRoute allowedRoles={['ADMIN', 'HR_MANAGER']}>
         <AppShell><UserManagementPage /></AppShell>
       </RoleRoute>
     ),

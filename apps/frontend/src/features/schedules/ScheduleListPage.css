@@ -1,53 +1,76 @@
 .schedule-page {
   display: flex;
   flex-direction: column;
+  padding: 0.5rem 1.5rem 2rem 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .schedule-loading {
   text-align: center;
-  padding: var(--sp-10);
-  color: var(--text-secondary);
+  padding: 3rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .schedule-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--sp-4);
+  gap: 1.25rem;
 }
 
 .schedule-card {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
 }
 
 .schedule-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .schedule-header h3 {
   margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .schedule-details {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
-  font-size: var(--text-sm);
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.schedule-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .schedule-label {
   color: var(--text-muted);
-  display: inline-block;
-  width: 90px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-width: 90px;
 }
 
 .schedule-actions {
   margin-top: auto;
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid var(--border);
-  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.75rem;
 }
