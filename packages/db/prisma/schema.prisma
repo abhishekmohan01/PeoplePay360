@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +5,799 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+
+// ============================================================
+// COMPANY
+// ============================================================
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+
+  name      String
+  currency  String
+  timezone  String
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  departments      Department[]
+  employees        Employee[]
+  contracts        Contract[]
+  workingSchedules WorkingSchedule[]
+  timeOffTypes     TimeOffType[]
+  salaryStructures SalaryStructure[]
+  payruns          Payrun[]
+  payrollWarnings  PayrollWarning[]
+
+  @@index([isActive])
+  @@map("companies")
+}
+
+
+// ============================================================
+// DEPARTMENT
+// ============================================================
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+
+  companyId String   @db.Uuid
+
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+  contracts Contract[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([companyId, isActive])
+  @@map("departments")
+}
+
+
+// ============================================================
+// EMPLOYEE
+// ============================================================
+
+model Employee {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  employeeCode String
+
+  firstName    String
+  lastName     String
+
+  workEmail    String?
+  workPhone    String?
+
+  companyId    String   @db.Uuid
+  departmentId String   @db.Uuid
+
+  managerId    String?  @db.Uuid
+
+  jobPosition  String
+  employeeType EmployeeType
+  status       EmployeeStatus @default(ACTIVE)
+
+  bankAccountNumber  String?
+  bankName           String?
+  bankIdentifierCode String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company      Company    @relation(fields: [companyId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  manager      Employee?  @relation("EmployeeManager", fields: [managerId], references: [id])
+
+  subordinates Employee[] @relation("EmployeeManager")
+
+  contracts          Contract[]
+  attendances        Attendance[]
+  timeOffRequests    TimeOffRequest[]
+  timeOffAllocations TimeOffAllocation[]
+  payrunEmployees    PayrunEmployee[]
+  payslips           Payslip[]
+  payrollWarnings    PayrollWarning[]
+
+  user User?
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([status])
+  @@map("employees")
+}
+
+enum EmployeeType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+}
+
+
+// ============================================================
+// CONTRACT
+// ============================================================
+
+model Contract {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  employeeId        String   @db.Uuid
+  companyId         String   @db.Uuid
+  departmentId      String   @db.Uuid
+
+  contractNumber    String
+
+  startDate         DateTime @db.Date
+  endDate           DateTime? @db.Date
+
+  wage              Decimal  @db.Decimal(12, 2)
+
+  jobPosition       String
+  contractType      String
+
+  workingScheduleId String   @db.Uuid
+  salaryStructureId String   @db.Uuid
+
+  status            ContractStatus @default(RUNNING)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  employee          Employee        @relation(fields: [employeeId], references: [id])
+  company           Company         @relation(fields: [companyId], references: [id])
+  department        Department      @relation(fields: [departmentId], references: [id])
+
+  workingSchedule   WorkingSchedule @relation(fields: [workingScheduleId], references: [id])
+  salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id])
+
+  payslips          Payslip[]
+
+  @@unique([companyId, contractNumber])
+  @@index([employeeId])
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([workingScheduleId])
+  @@index([salaryStructureId])
+  @@index([startDate, endDate])
+  @@map("contracts")
+}
+
+enum ContractStatus {
+  RUNNING
+  EXPIRED
+  TERMINATED
+}
+
+
+// ============================================================
+// WORKING SCHEDULE
+// ============================================================
+
+model WorkingSchedule {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  companyId    String   @db.Uuid
+
+  name         String
+  timezone     String
+
+  daysPerWeek  Decimal  @db.Decimal(4, 2)
+  hoursPerWeek Decimal  @db.Decimal(6, 2)
+
+  isActive     Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company      Company             @relation(fields: [companyId], references: [id])
+  days         WorkingScheduleDay[]
+  contracts    Contract[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@index([companyId, isActive])
+  @@map("working_schedules")
+}
+
+
+// ============================================================
+// WORKING SCHEDULE DAY
+// ============================================================
+
+model WorkingScheduleDay {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  workingScheduleId String   @db.Uuid
+
+  dayOfWeek         Int
+
+  startTime         DateTime @db.Time
+  endTime           DateTime @db.Time
+
+  breakMinutes      Int      @default(0)
+
+  hours             Decimal  @db.Decimal(5, 2)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workingSchedule   WorkingSchedule @relation(fields: [workingScheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([workingScheduleId, dayOfWeek])
+  @@index([workingScheduleId])
+  @@map("working_schedule_days")
+}
+
+
+// ============================================================
+// ATTENDANCE
+// ============================================================
+
+model Attendance {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  employeeId  String   @db.Uuid
+
+  checkIn     DateTime
+  checkOut    DateTime?
+
+  workedHours Decimal  @default(0) @db.Decimal(6, 2)
+  overtime    Decimal  @default(0) @db.Decimal(6, 2)
+
+  status      AttendanceStatus @default(PRESENT)
+
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([checkIn])
+  @@index([employeeId, checkIn])
+  @@index([status])
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EARLY_CHECKOUT
+  MISSING_CHECKOUT
+  CORRECTED
+}
+
+
+// ============================================================
+// TIME OFF TYPE
+// ============================================================
+
+model TimeOffType {
+  id                 String   @id @default(uuid()) @db.Uuid
+
+  companyId          String   @db.Uuid
+
+  name               String
+  unit               TimeOffUnit
+
+  requiresAllocation Boolean  @default(true)
+  approvalRequired   Boolean  @default(true)
+  payrollWorkEntry   Boolean  @default(false)
+
+  displayColor       String?
+  configurationNotes String?
+
+  isActive           Boolean  @default(true)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company            Company            @relation(fields: [companyId], references: [id])
+  requests           TimeOffRequest[]
+  allocations        TimeOffAllocation[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@index([companyId, isActive])
+  @@map("time_off_types")
+}
+
+enum TimeOffUnit {
+  DAYS
+  HOURS
+}
+
+
+// ============================================================
+// TIME OFF ALLOCATION
+// ============================================================
+
+model TimeOffAllocation {
+  id             String   @id @default(uuid()) @db.Uuid
+
+  employeeId     String   @db.Uuid
+  timeOffTypeId  String   @db.Uuid
+
+  allocated      Decimal  @db.Decimal(8, 2)
+  taken          Decimal  @default(0) @db.Decimal(8, 2)
+  remaining      Decimal  @db.Decimal(8, 2)
+
+  validityStart  DateTime @db.Date
+  validityEnd    DateTime? @db.Date
+
+  status         TimeOffAllocationStatus @default(DRAFT)
+
+  approverId     String?  @db.Uuid
+  description    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee       Employee          @relation(fields: [employeeId], references: [id])
+  timeOffType    TimeOffType       @relation(fields: [timeOffTypeId], references: [id])
+  approver       User?             @relation("TimeOffAllocationApprover", fields: [approverId], references: [id])
+
+  requests       TimeOffRequest[]
+
+  @@index([employeeId])
+  @@index([timeOffTypeId])
+  @@index([employeeId, timeOffTypeId])
+  @@index([status])
+  @@index([approverId])
+  @@map("time_off_allocations")
+}
+
+enum TimeOffAllocationStatus {
+  DRAFT
+  CONFIRMED
+  REFUSED
+}
+
+
+// ============================================================
+// TIME OFF REQUEST
+// ============================================================
+
+model TimeOffRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+
+  employeeId     String   @db.Uuid
+  timeOffTypeId  String   @db.Uuid
+  allocationId   String?  @db.Uuid
+
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  duration       Decimal  @db.Decimal(8, 2)
+
+  status         TimeOffRequestStatus @default(DRAFT)
+
+  approverId     String?  @db.Uuid
+  allocationUsed Decimal  @default(0) @db.Decimal(8, 2)
+
+  reason         String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee       Employee           @relation(fields: [employeeId], references: [id])
+  timeOffType    TimeOffType        @relation(fields: [timeOffTypeId], references: [id])
+  allocation     TimeOffAllocation? @relation(fields: [allocationId], references: [id])
+  approver       User?              @relation("TimeOffRequestApprover", fields: [approverId], references: [id])
+
+  @@index([employeeId])
+  @@index([timeOffTypeId])
+  @@index([allocationId])
+  @@index([approverId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("time_off_requests")
+}
+
+enum TimeOffRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REFUSED
+  CANCELLED
+}
+
+
+// ============================================================
+// SALARY STRUCTURE
+// ============================================================
+
+model SalaryStructure {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  companyId   String   @db.Uuid
+
+  name        String
+  code        String
+  description String?
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company   @relation(fields: [companyId], references: [id])
+
+  rules       SalaryRule[]
+  contracts   Contract[]
+  payruns     Payrun[]
+  payslips    Payslip[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([companyId, isActive])
+  @@map("salary_structures")
+}
+
+
+// ============================================================
+// SALARY RULE
+// ============================================================
+
+model SalaryRule {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  salaryStructureId String   @db.Uuid
+
+  name              String
+  code              String
+  category          SalaryRuleCategory
+  sequence          Int
+
+  computationType   SalaryComputationType
+  computationValue  String
+
+  isActive          Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id])
+
+  payslipLines      PayslipLine[]
+
+  @@unique([salaryStructureId, code])
+  @@index([salaryStructureId])
+  @@index([salaryStructureId, sequence])
+  @@index([category])
+  @@map("salary_rules")
+}
+
+enum SalaryRuleCategory {
+  BASIC
+  ALLOWANCE
+  DEDUCTION
+  GROSS
+  NET
+  OTHER
+}
+
+enum SalaryComputationType {
+  FIXED_AMOUNT
+  PERCENTAGE_OF_WAGE
+  PYTHON_CODE
+}
+
+
+// ============================================================
+// PAYRUN
+// ============================================================
+
+model Payrun {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  companyId         String   @db.Uuid
+  salaryStructureId String   @db.Uuid
+
+  name              String
+
+  periodStart       DateTime @db.Date
+  periodEnd         DateTime @db.Date
+
+  status            PayrunStatus @default(DRAFT)
+
+  employeeCount     Int @default(0)
+  warningCount      Int @default(0)
+
+  computedAt        DateTime?
+  validatedAt       DateTime?
+  paidAt            DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company           Company         @relation(fields: [companyId], references: [id])
+  salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id])
+
+  employees         PayrunEmployee[]
+  payslips          Payslip[]
+  warnings          PayrollWarning[]
+
+  @@unique([companyId, periodStart, periodEnd, salaryStructureId])
+  @@index([companyId])
+  @@index([salaryStructureId])
+  @@index([periodStart, periodEnd])
+  @@index([status])
+  @@map("payruns")
+}
+
+enum PayrunStatus {
+  DRAFT
+  COMPUTED
+  VALIDATED
+  PAID
+}
+
+
+// ============================================================
+// PAYRUN EMPLOYEE
+// ============================================================
+
+model PayrunEmployee {
+  id         String   @id @default(uuid()) @db.Uuid
+
+  payrunId   String   @db.Uuid
+  employeeId String   @db.Uuid
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  payrun     Payrun   @relation(fields: [payrunId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([payrunId, employeeId])
+  @@index([payrunId])
+  @@index([employeeId])
+  @@map("payrun_employees")
+}
+
+
+// ============================================================
+// PAYSLIP
+// ============================================================
+
+model Payslip {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  payrunId          String   @db.Uuid
+  employeeId        String   @db.Uuid
+  contractId        String   @db.Uuid
+  salaryStructureId String   @db.Uuid
+
+  periodStart       DateTime @db.Date
+  periodEnd         DateTime @db.Date
+
+  basicSalary       Decimal  @db.Decimal(12, 2)
+  grossSalary       Decimal  @db.Decimal(12, 2)
+  totalDeductions   Decimal  @db.Decimal(12, 2)
+  netSalary         Decimal  @db.Decimal(12, 2)
+
+  status            PayslipStatus @default(DRAFT)
+  warningCount      Int @default(0)
+
+  pdfPath           String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  payrun            Payrun          @relation(fields: [payrunId], references: [id])
+  employee          Employee        @relation(fields: [employeeId], references: [id])
+  contract          Contract        @relation(fields: [contractId], references: [id])
+  salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id])
+
+  lines             PayslipLine[]
+  warnings          PayrollWarning[]
+
+  @@unique([employeeId, payrunId])
+  @@index([payrunId])
+  @@index([employeeId])
+  @@index([contractId])
+  @@index([salaryStructureId])
+  @@index([status])
+  @@map("payslips")
+}
+
+enum PayslipStatus {
+  DRAFT
+  COMPUTED
+  VALIDATED
+  PAID
+}
+
+
+// ============================================================
+// PAYSLIP LINE
+// ============================================================
+
+model PayslipLine {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  payslipId    String   @db.Uuid
+  salaryRuleId String   @db.Uuid
+
+  name         String
+  code         String
+  category     SalaryRuleCategory
+  sequence     Int
+
+  amount       Decimal  @db.Decimal(12, 2)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  payslip      Payslip    @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  salaryRule   SalaryRule @relation(fields: [salaryRuleId], references: [id])
+
+  @@unique([payslipId, salaryRuleId])
+  @@index([payslipId])
+  @@index([salaryRuleId])
+  @@index([payslipId, sequence])
+  @@map("payslip_lines")
+}
+
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  employeeId   String?  @unique @db.Uuid
+
+  email        String   @unique
+  passwordHash String
+
+  status       UserStatus @default(ACTIVE)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee                   Employee?            @relation(fields: [employeeId], references: [id])
+
+  roles                      UserRole[]
+
+  approvedTimeOffRequests    TimeOffRequest[]     @relation("TimeOffRequestApprover")
+  approvedTimeOffAllocations TimeOffAllocation[]  @relation("TimeOffAllocationApprover")
+
+  @@index([status])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+
+// ============================================================
+// ROLE
+// ============================================================
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  name        String
+  code        RoleCode
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       UserRole[]
+
+  @@unique([code])
+  @@map("roles")
+}
+
+enum RoleCode {
+  EMPLOYEE
+  HR_MANAGER
+  TIME_OFF_ADMIN
+  PAYROLL_USER
+  ADMIN
+}
+
+
+// ============================================================
+// USER ROLE
+// ============================================================
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+
+  userId    String   @db.Uuid
+  roleId    String   @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+
+// ============================================================
+// PAYROLL WARNING
+// ============================================================
+
+model PayrollWarning {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  companyId   String   @db.Uuid
+
+  payrunId    String?  @db.Uuid
+  payslipId   String?  @db.Uuid
+  employeeId  String?  @db.Uuid
+
+  type        PayrollWarningType
+  severity    PayrollWarningSeverity @default(WARNING)
+
+  message     String
+
+  isResolved  Boolean  @default(false)
+  resolvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company @relation(fields: [companyId],references: [id])
+
+  payrun      Payrun? @relation(fields: [payrunId],references: [id],onDelete: Cascade)
+
+  payslip     Payslip?  @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([companyId])
+  @@index([payrunId])
+  @@index([payslipId])
+  @@index([employeeId])
+  @@index([type])
+  @@index([isResolved])
+  @@map("payroll_warnings")
+}
+
+enum PayrollWarningType {
+  MISSING_BANK_ACCOUNT
+  DUPLICATE_PAYSLIP
+  MISSING_INFORMATION
+  EXPIRING_CONTRACT
+  UNVALIDATED_PAYRUN
+  OTHER
+}
+
+enum PayrollWarningSeverity {
+  INFO
+  WARNING
+  ERROR
 }
