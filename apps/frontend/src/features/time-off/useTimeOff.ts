@@ -59,7 +59,25 @@ export function useApproveTimeOff() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => approveTimeOff(id),
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['timeOff'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['timeOff'] });
+      // Optimistically mark request as APPROVED
+      queryClient.setQueriesData({ queryKey: ['timeOff'] }, (old: any) =>
+        Array.isArray(old)
+          ? old.map((r: any) => (r.id === id ? { ...r, status: 'APPROVED' } : r))
+          : old
+      );
+      return { previousData };
+    },
+    onError: (_err, _id, context: any) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([key, data]: any) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['timeOff'] });
       queryClient.invalidateQueries({ queryKey: ['timeOffAllocations'] });
     },
@@ -70,7 +88,25 @@ export function useRefuseTimeOff() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => refuseTimeOff(id),
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['timeOff'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['timeOff'] });
+      // Optimistically mark request as REFUSED
+      queryClient.setQueriesData({ queryKey: ['timeOff'] }, (old: any) =>
+        Array.isArray(old)
+          ? old.map((r: any) => (r.id === id ? { ...r, status: 'REFUSED' } : r))
+          : old
+      );
+      return { previousData };
+    },
+    onError: (_err, _id, context: any) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([key, data]: any) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['timeOff'] });
       queryClient.invalidateQueries({ queryKey: ['timeOffAllocations'] });
     },

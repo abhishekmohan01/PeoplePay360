@@ -14,7 +14,7 @@ timeOffRouter.use(authenticateJWT);
 // GET /api/time-off/types
 timeOffRouter.get("/types", async (req, res, next) => {
   try {
-    const { companyId, isActive } = req.query;
+    const { companyId, isActive, includeCounts } = req.query;
     const where: any = {};
     const targetCompanyId = companyId ? String(companyId) : req.user?.companyId;
     if (targetCompanyId) where.companyId = targetCompanyId;
@@ -29,7 +29,11 @@ timeOffRouter.get("/types", async (req, res, next) => {
     const types = await prisma.timeOffType.findMany({
       where,
       include: {
-        _count: { select: { requests: true, allocations: true } },
+        ...(includeCounts === "true"
+          ? {
+              _count: { select: { requests: true, allocations: true } },
+            }
+          : {}),
       },
       orderBy: { name: "asc" },
     });
@@ -211,7 +215,7 @@ timeOffRouter.patch("/allocations/:id/status", requireRoles("TIME_OFF_ADMIN", "H
 // GET /api/time-off/requests
 timeOffRouter.get("/requests", async (req, res, next) => {
   try {
-    const { employeeId, status, myTeam } = req.query;
+    const { employeeId, status, myTeam, limit, offset } = req.query;
     const where: any = {};
 
     const userRoles = req.user?.roles || [];
@@ -254,6 +258,8 @@ timeOffRouter.get("/requests", async (req, res, next) => {
         approver: { select: { id: true, email: true } },
       },
       orderBy: { startDate: "desc" },
+      take: limit !== undefined ? Math.min(Number(limit), 500) : 100,
+      skip: offset !== undefined ? Math.max(0, Number(offset)) : 0,
     });
 
     return res.json(requests);
@@ -342,7 +348,7 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
 
     const request = await prisma.timeOffRequest.findUnique({
       where: { id },
-      include: { timeOffType: true, allocation: true, employee: true },
+      include: { timeOffType: true, allocation: true, employee: { select: { managerId: true } } },
     });
 
     if (!request) {
@@ -363,8 +369,9 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
 
     const dur = Number(request.duration);
 
+    // Run transaction and capture the updated request directly — avoids a post-transaction re-fetch
+    let updatedRequest: any = null;
     await prisma.$transaction(async (tx) => {
-      // If requires allocation, deduct from allocation balance
       if (request.timeOffType.requiresAllocation) {
         let alloc = request.allocation;
         if (!alloc) {
@@ -382,18 +389,15 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
           throw new Error("Insufficient remaining leave balance to approve this request");
         }
 
-        const newRemaining = Number(alloc.remaining) - dur;
-        const newTaken = Number(alloc.taken) + dur;
-
         await tx.timeOffAllocation.update({
           where: { id: alloc.id },
           data: {
-            remaining: newRemaining,
-            taken: newTaken,
+            remaining: Number(alloc.remaining) - dur,
+            taken: Number(alloc.taken) + dur,
           },
         });
 
-        await tx.timeOffRequest.update({
+        updatedRequest = await tx.timeOffRequest.update({
           where: { id },
           data: {
             allocationId: alloc.id,
@@ -403,7 +407,7 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
           },
         });
       } else {
-        await tx.timeOffRequest.update({
+        updatedRequest = await tx.timeOffRequest.update({
           where: { id },
           data: {
             status: "APPROVED",
@@ -413,12 +417,8 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
       }
     });
 
-    const updated = await prisma.timeOffRequest.findUnique({
-      where: { id },
-      include: { employee: true, timeOffType: true, allocation: true },
-    });
-
-    return res.json({ success: true, request: updated });
+    // Return the updated record captured inside the transaction (no extra round trip)
+    return res.json({ success: true, request: { ...updatedRequest, status: "APPROVED" } });
   } catch (err: any) {
     next(err);
   }
@@ -428,34 +428,38 @@ timeOffRouter.post("/requests/:id/approve", async (req, res, next) => {
 timeOffRouter.post("/requests/:id/refuse", async (req, res, next) => {
   try {
     const id = req.params.id as string;
-
-    const request = await prisma.timeOffRequest.findUnique({
-      where: { id },
-      include: { employee: true },
-    });
-
-    if (!request) {
-      return res.status(404).json({ error: true, message: "Leave request not found" });
-    }
-
     const userRoles = req.user?.roles || [];
     const isPrivileged = userRoles.some((r: string) => ['ADMIN', 'HR_MANAGER', 'TIME_OFF_ADMIN'].includes(r));
-    const isManager = req.user?.employeeId && request.employee?.managerId === req.user.employeeId;
 
-    if (!isPrivileged && !isManager) {
-      return res.status(403).json({ error: true, message: "Forbidden: Not authorized to refuse this leave request" });
+    if (!isPrivileged) {
+      // Non-privileged users need a manager check — fetch minimal fields only
+      const request = await prisma.timeOffRequest.findUnique({
+        where: { id },
+        select: { employee: { select: { managerId: true } } },
+      });
+      if (!request) {
+        return res.status(404).json({ error: true, message: "Leave request not found" });
+      }
+      const isManager = req.user?.employeeId && request.employee?.managerId === req.user.employeeId;
+      if (!isManager) {
+        return res.status(403).json({ error: true, message: "Forbidden: Not authorized to refuse this leave request" });
+      }
     }
 
+    // Single update — privileged users skip the pre-fetch entirely
     const updated = await prisma.timeOffRequest.update({
       where: { id },
       data: {
         status: "REFUSED",
         approverId: req.user?.id,
       },
-      include: { employee: true, timeOffType: true },
     });
 
-    return res.json({ success: true, request: updated });
+    if (!updated) {
+      return res.status(404).json({ error: true, message: "Leave request not found" });
+    }
+
+    return res.json({ success: true, request: { ...updated, status: "REFUSED" } });
   } catch (err) {
     next(err);
   }

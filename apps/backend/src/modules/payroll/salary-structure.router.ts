@@ -11,7 +11,7 @@ salaryStructureRouter.use(requireRoles("PAYROLL_USER", "HR_MANAGER"));
 // GET /api/salary-structures
 salaryStructureRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, isActive } = req.query;
+    const { companyId, isActive, includeCounts } = req.query;
     const where: any = {};
     if (companyId) where.companyId = String(companyId);
     if (isActive !== undefined) where.isActive = isActive === "true";
@@ -19,13 +19,17 @@ salaryStructureRouter.get("/", async (req, res, next) => {
     const structures = await prisma.salaryStructure.findMany({
       where,
       include: {
-        _count: {
-          select: {
-            rules: true,
-            contracts: true,
-            payruns: true,
-          },
-        },
+        ...(includeCounts === "true"
+          ? {
+              _count: {
+                select: {
+                  rules: true,
+                  contracts: true,
+                  payruns: true,
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { name: "asc" },
     });

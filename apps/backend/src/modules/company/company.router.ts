@@ -7,16 +7,21 @@ export const companyRouter = Router();
 
 companyRouter.use(authenticateJWT);
 
-companyRouter.get("/", async (_req, res, next) => {
+companyRouter.get("/", async (req, res, next) => {
   try {
+    const { includeCounts } = req.query;
     const companies = await prisma.company.findMany({
       include: {
-        _count: {
-          select: {
-            employees: true,
-            departments: true,
-          },
-        },
+        ...(includeCounts === "true"
+          ? {
+              _count: {
+                select: {
+                  employees: true,
+                  departments: true,
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { createdAt: "asc" },
     });

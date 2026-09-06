@@ -157,10 +157,10 @@ attendanceRouter.post("/check-out", async (req, res, next) => {
 // HR & Management Attendance Endpoints
 // ==========================================
 
-// GET /api/attendance - list attendance records
+// GET /api/attendance - list attendance records (with pagination)
 attendanceRouter.get("/", async (req, res, next) => {
   try {
-    const { employeeId, departmentId, status, startDate, endDate } = req.query;
+    const { employeeId, departmentId, status, startDate, endDate, limit, offset } = req.query;
     const where: any = {};
 
     const userRoles = req.user?.roles || [];
@@ -181,6 +181,9 @@ attendanceRouter.get("/", async (req, res, next) => {
       if (endDate) where.checkIn.lte = new Date(String(endDate));
     }
 
+    const take = limit !== undefined ? Math.min(Number(limit), 500) : 100;
+    const skip = offset !== undefined ? Math.max(0, Number(offset)) : 0;
+
     const records = await prisma.attendance.findMany({
       where,
       include: {
@@ -195,6 +198,8 @@ attendanceRouter.get("/", async (req, res, next) => {
         },
       },
       orderBy: { checkIn: "desc" },
+      take,
+      skip,
     });
 
     return res.json(records);

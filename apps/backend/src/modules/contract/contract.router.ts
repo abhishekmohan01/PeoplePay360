@@ -10,7 +10,7 @@ contractRouter.use(authenticateJWT);
 // GET /api/contracts
 contractRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, employeeId, departmentId, status } = req.query;
+    const { companyId, employeeId, departmentId, status, limit, offset } = req.query;
     const where: any = {};
 
     if (companyId) where.companyId = String(companyId);
@@ -22,6 +22,9 @@ contractRouter.get("/", async (req, res, next) => {
     if (req.user?.roles.includes("EMPLOYEE") && !req.user.roles.includes("ADMIN") && !req.user.roles.includes("HR_MANAGER") && !req.user.roles.includes("PAYROLL_USER") && req.user.employeeId) {
       where.employeeId = req.user.employeeId;
     }
+
+    const take = limit !== undefined ? Math.min(Number(limit), 500) : 100;
+    const skip = offset !== undefined ? Math.max(0, Number(offset)) : 0;
 
     const contracts = await prisma.contract.findMany({
       where,
@@ -39,6 +42,8 @@ contractRouter.get("/", async (req, res, next) => {
         workingSchedule: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
+      take,
+      skip,
     });
 
     return res.json(contracts);

@@ -49,13 +49,15 @@ export const EmployeeCard: React.FC<{ employee: Employee }> = ({ employee }) => 
         </div>
 
         <div className="emp-card-info flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-1">
-            <h3 className="group-hover:text-primary transition-colors">
+          <div className="flex items-center justify-between gap-1.5">
+            <h3 className="group-hover:text-primary transition-colors truncate">
               {employee.name}
             </h3>
-            <ArrowUpRight size={14} className="text-text-muted opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all flex-shrink-0" />
+            <div className="w-6 h-6 rounded-md bg-elevated border border-border/70 flex items-center justify-center text-text-muted group-hover:text-primary group-hover:border-primary/40 group-hover:bg-primary/10 transition-all flex-shrink-0">
+              <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
           </div>
-          <p>{employee.jobPosition || 'Employee'}</p>
+          <p className="truncate">{employee.jobPosition || 'Employee'}</p>
         </div>
       </div>
 
@@ -120,7 +122,7 @@ export const EmployeeCard: React.FC<{ employee: Employee }> = ({ employee }) => 
           title="View Contracts"
           className="emp-stat-btn"
         >
-          <FileText size={12} className="text-indigo-500" />
+          <FileText size={12} className="text-emerald-500" />
           <span>{employee._count?.contracts ?? 0}</span>
         </button>
       </div>
@@ -128,8 +130,9 @@ export const EmployeeCard: React.FC<{ employee: Employee }> = ({ employee }) => 
       {/* Card Footer: Status Badge & Action hint */}
       <div className="emp-card-footer">
         <StatusBadge status={employee.status} />
-        <span className="text-[11px] font-medium text-text-muted group-hover:text-primary transition-colors">
-          View Profile ➔
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-text-muted group-hover:text-primary transition-colors">
+          <span>View Profile</span>
+          <ArrowUpRight size={12} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </span>
       </div>
     </div>

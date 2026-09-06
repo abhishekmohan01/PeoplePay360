@@ -9,7 +9,7 @@ departmentRouter.use(authenticateJWT);
 
 departmentRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, isActive } = req.query;
+    const { companyId, isActive, includeCounts } = req.query;
     const where: any = {};
     if (companyId) where.companyId = String(companyId);
     if (isActive !== undefined) where.isActive = isActive === "true";
@@ -17,9 +17,13 @@ departmentRouter.get("/", async (req, res, next) => {
     const departments = await prisma.department.findMany({
       where,
       include: {
-        _count: {
-          select: { employees: true, contracts: true },
-        },
+        ...(includeCounts === "true"
+          ? {
+              _count: {
+                select: { employees: true, contracts: true },
+              },
+            }
+          : {}),
       },
       orderBy: { name: "asc" },
     });

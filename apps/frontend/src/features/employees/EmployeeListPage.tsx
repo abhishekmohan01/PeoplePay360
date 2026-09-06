@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useEmployees } from './useEmployees';
 import { filterEmployees } from './filterEmployees';
 import { EmployeeModal } from './EmployeeModal';
-import { Pagination } from '../../components/ui/Pagination';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { SearchInput } from '../../components/ui/SearchInput';
@@ -22,7 +21,11 @@ import {
   X, 
   Clock, 
   Calendar, 
-  FileText 
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  MapPin
 } from 'lucide-react';
 import './EmployeeListPage.css';
 
@@ -79,6 +82,10 @@ export const EmployeeListPage = () => {
     const start = (currentPage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const startItem = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, filtered.length);
 
   // Aggregate stats
   const totalCount = employees?.length || 0;
@@ -183,8 +190,8 @@ export const EmployeeListPage = () => {
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="bg-surface border border-border rounded-xl p-3 mb-6 shadow-xs flex flex-wrap items-center justify-between gap-3">
+      {/* Search & Filter Toolbar - Sticky Pinning Below Floating TopNav (84px offset) */}
+      <div className="emp-toolbar-sticky bg-surface/95 backdrop-blur-md border border-border rounded-xl p-3 mb-5 shadow-xs flex flex-wrap items-center justify-between gap-3 transition-all">
         <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
           <div className="w-full sm:w-72">
             <SearchInput 
@@ -243,32 +250,87 @@ export const EmployeeListPage = () => {
           )}
         </div>
         
-        {/* Modern High-Contrast Segmented View Toggle */}
-        <div className="flex bg-elevated border border-border rounded-lg p-1">
-          <button 
-            type="button"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              view === 'kanban' 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
-            onClick={() => setView('kanban')}
-          >
-            <LayoutGrid size={14} />
-            <span>Kanban</span>
-          </button>
-          <button 
-            type="button"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              view === 'list' 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
-            onClick={() => setView('list')}
-          >
-            <List size={14} />
-            <span>List</span>
-          </button>
+        <div className="flex items-center gap-2.5">
+          {/* Pagination Options Toolbar Span */}
+          {filtered.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-text-secondary whitespace-nowrap font-medium hidden sm:inline">
+                <strong className="text-text-primary font-semibold">{startItem}–{endItem}</strong> of {filtered.length}
+              </span>
+
+              {/* Items Per Page Selector */}
+              <select
+                id="toolbar-page-size"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-border bg-surface text-text-primary px-2 py-1.5 rounded-lg text-xs font-medium outline-none focus:border-primary cursor-pointer transition-colors"
+                title="Employees per page"
+              >
+                <option value={10}>10 / page</option>
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+                <option value={100}>100 / page</option>
+              </select>
+
+              {/* Quick Prev / Next Chevrons */}
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  aria-label="Previous page"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  aria-label="Next page"
+                  title="Next page"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {/* Subtle divider */}
+              <div className="h-5 w-px bg-border mx-0.5" />
+            </div>
+          )}
+
+          {/* Modern High-Contrast Segmented View Toggle */}
+          <div className="flex bg-elevated border border-border rounded-lg p-1">
+            <button 
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                view === 'kanban' 
+                  ? 'bg-primary text-white shadow-sm' 
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              onClick={() => setView('kanban')}
+            >
+              <LayoutGrid size={14} />
+              <span>Kanban</span>
+            </button>
+            <button 
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                view === 'list' 
+                  ? 'bg-primary text-white shadow-sm' 
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              onClick={() => setView('list')}
+            >
+              <List size={14} />
+              <span>List</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -287,101 +349,117 @@ export const EmployeeListPage = () => {
       {filtered && filtered.length > 0 ? (
         <>
           {view === 'kanban' ? (
-            <div className="emp-grid">
-              {paginatedEmployees.map(emp => (
-                <EmployeeCard key={emp.id} employee={emp} />
-              ))}
+            <div className="emp-kanban-scroll-container">
+              <div className="emp-grid">
+                {paginatedEmployees.map(emp => (
+                  <EmployeeCard key={emp.id} employee={emp} />
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
-              <table className="table-enterprise">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Work Email</th>
-                    <th>Job Title</th>
-                    <th>Department</th>
-                    <th>Location</th>
-                    <th>Related Records</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedEmployees.map((emp) => (
-                    <tr 
-                      key={emp.id} 
-                      onClick={() => navigate(`/employees/${emp.id}`)}
-                      className="cursor-pointer"
-                    >
-                      <td>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar name={emp.name} size="sm" />
-                          <div>
-                            <div className="font-semibold text-text-primary text-sm">{emp.name}</div>
-                            {emp.employeeCode && (
-                              <span className="text-[10px] font-mono text-text-muted">{emp.employeeCode}</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-text-secondary text-sm">{emp.email}</td>
-                      <td className="text-text-primary text-sm font-medium">{emp.jobPosition}</td>
-                      <td>
-                        <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-md bg-elevated border border-border text-text-secondary">
+            <div className="emp-list-scroll-container">
+              {paginatedEmployees.map((emp) => (
+                <div 
+                  key={emp.id} 
+                  onClick={() => navigate(`/employees/${emp.id}`)}
+                  className="bg-surface hover:bg-elevated border border-border hover:border-primary/40 rounded-xl p-3.5 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group select-none"
+                >
+                  {/* Left: Avatar, Name, Code, Role, Dept */}
+                  <div className="flex items-center gap-3.5 min-w-[260px]">
+                    <div className="relative flex-shrink-0">
+                      <Avatar name={emp.name} size="md" />
+                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-[var(--surface)] ${
+                        (emp.status || '').toUpperCase() === 'ACTIVE' 
+                          ? 'bg-emerald-500' 
+                          : (emp.status || '').toUpperCase() === 'TERMINATED'
+                            ? 'bg-rose-500'
+                            : 'bg-amber-500'
+                      }`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-text-primary text-sm group-hover:text-primary transition-colors truncate">
+                          {emp.name}
+                        </span>
+                        {emp.employeeCode && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated border border-border text-text-muted">
+                            {emp.employeeCode}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-text-secondary font-medium truncate">
+                          {emp.jobPosition || 'Employee'}
+                        </span>
+                        <span className="text-text-muted text-[10px]">•</span>
+                        <span className="text-[11px] font-medium text-text-muted bg-elevated px-2 py-0.5 rounded-md border border-border/60 truncate">
                           {emp.departmentName || emp.department?.name || 'General'}
                         </span>
-                      </td>
-                      <td className="text-text-muted text-xs">{emp.workLocation || 'Main Office'}</td>
-                      <td>
-                        <div className="flex items-center gap-2 text-xs" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/attendance?employeeId=${emp.id}`)}
-                            className="flex items-center gap-1 text-text-secondary hover:text-primary px-1.5 py-0.5 rounded border border-border bg-surface"
-                            title="Attendance Records"
-                          >
-                            <Clock size={11} className="text-primary" />
-                            <span>{emp._count?.attendances ?? 0}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/time-off?employeeId=${emp.id}`)}
-                            className="flex items-center gap-1 text-text-secondary hover:text-primary px-1.5 py-0.5 rounded border border-border bg-surface"
-                            title="Time Off Requests"
-                          >
-                            <Calendar size={11} className="text-amber-500" />
-                            <span>{emp._count?.timeOffRequests ?? 0}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/contracts?employeeId=${emp.id}`)}
-                            className="flex items-center gap-1 text-text-secondary hover:text-primary px-1.5 py-0.5 rounded border border-border bg-surface"
-                            title="Contracts"
-                          >
-                            <FileText size={11} className="text-indigo-500" />
-                            <span>{emp._count?.contracts ?? 0}</span>
-                          </button>
-                        </div>
-                      </td>
-                      <td>
-                        <StatusBadge status={emp.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle: Work Email & Location */}
+                  <div className="hidden lg:flex items-center gap-4 text-xs text-text-secondary min-w-[220px]">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Mail size={13} className="text-text-muted flex-shrink-0" />
+                      <span className="truncate">{emp.email || '—'}</span>
+                    </div>
+                    {emp.workLocation && (
+                      <div className="flex items-center gap-1.5 text-text-muted truncate">
+                        <MapPin size={13} className="flex-shrink-0" />
+                        <span className="truncate">{emp.workLocation}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Quick Action Badges, Status, and Action Chevron */}
+                  <div className="flex items-center gap-3 flex-shrink-0 justify-between sm:justify-end">
+                    {/* Quick Metric Badges */}
+                    <div className="flex items-center gap-1.5 text-xs" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/attendance?employeeId=${emp.id}`)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-surface hover:bg-elevated hover:border-primary/30 text-text-secondary hover:text-primary transition-colors"
+                        title="Attendance Records"
+                      >
+                        <Clock size={12} className="text-primary" />
+                        <span className="font-medium">{emp._count?.attendances ?? 0}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/time-off?employeeId=${emp.id}`)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-surface hover:bg-elevated hover:border-amber-500/30 text-text-secondary hover:text-amber-500 transition-colors"
+                        title="Time Off Requests"
+                      >
+                        <Calendar size={12} className="text-amber-500" />
+                        <span className="font-medium">{emp._count?.timeOffRequests ?? 0}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/contracts?employeeId=${emp.id}`)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-surface hover:bg-elevated hover:border-emerald-500/30 text-text-secondary hover:text-emerald-500 transition-colors"
+                        title="Active Contracts"
+                      >
+                        <FileText size={12} className="text-emerald-500" />
+                        <span className="font-medium">{emp._count?.contracts ?? 0}</span>
+                      </button>
+                    </div>
+
+                    {/* Status Badge */}
+                    <StatusBadge status={emp.status} />
+
+                    {/* Navigate Chevron */}
+                    <div className="w-8 h-8 rounded-lg bg-elevated border border-border text-text-muted group-hover:text-primary group-hover:border-primary/40 group-hover:bg-primary/10 flex items-center justify-center transition-all flex-shrink-0 group-hover:translate-x-0.5">
+                      <ChevronRight size={15} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-
-          {/* Floating Pill Pagination matching reference screenshot */}
-          <Pagination 
-            currentPage={currentPage}
-            totalItems={filtered.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            itemLabel="employees"
-          />
         </>
       ) : (
         !isLoading && (

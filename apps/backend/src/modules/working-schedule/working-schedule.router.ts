@@ -9,7 +9,7 @@ workingScheduleRouter.use(authenticateJWT);
 
 workingScheduleRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, isActive } = req.query;
+    const { companyId, isActive, includeCounts } = req.query;
     const where: any = {};
     const targetCompanyId = companyId ? String(companyId) : req.user?.companyId;
     if (targetCompanyId) where.companyId = targetCompanyId;
@@ -19,7 +19,11 @@ workingScheduleRouter.get("/", async (req, res, next) => {
       where,
       include: {
         days: { orderBy: { dayOfWeek: "asc" } },
-        _count: { select: { contracts: { where: { status: 'RUNNING', employee: { status: 'ACTIVE' } } } } },
+        ...(includeCounts === "true"
+          ? {
+              _count: { select: { contracts: { where: { status: 'RUNNING', employee: { status: 'ACTIVE' } } } } },
+            }
+          : {}),
       },
       orderBy: { name: "asc" },
     });

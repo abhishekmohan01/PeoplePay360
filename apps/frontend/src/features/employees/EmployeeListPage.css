@@ -33,3 +33,67 @@
 .emp-error {
   color: var(--error);
 }
+
+/* Smooth custom scroll container for card list view */
+.emp-list-scroll-container {
+  max-height: calc(100vh - 270px);
+  min-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.emp-list-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emp-list-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emp-list-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.emp-list-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Smooth custom scroll container for Kanban grid view */
+.emp-kanban-scroll-container {
+  max-height: calc(100vh - 270px);
+  min-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.25rem 0.5rem 1.5rem 0.25rem;
+  scroll-behavior: smooth;
+}
+
+.emp-kanban-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emp-kanban-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emp-kanban-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.emp-kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Sticky toolbar pinned directly below floating TopNav (58px height + 12px top + 14px gap = 84px) */
+.emp-toolbar-sticky {
+  position: sticky;
+  top: calc(58px + 1.6rem);
+  z-index: 20;
+}

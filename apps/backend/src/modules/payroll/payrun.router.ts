@@ -71,7 +71,7 @@ payrunRouter.get("/eligible-employees", async (req, res, next) => {
 // GET /api/payruns - list payruns
 payrunRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, status } = req.query;
+    const { companyId, status, includeCounts, limit, offset } = req.query;
     const where: any = {};
     if (companyId) where.companyId = String(companyId);
     if (status) where.status = String(status);
@@ -80,14 +80,20 @@ payrunRouter.get("/", async (req, res, next) => {
       where,
       include: {
         salaryStructure: { select: { id: true, name: true, code: true } },
-        _count: {
-          select: {
-            payslips: true,
-            warnings: true,
-          },
-        },
+        ...(includeCounts === "true"
+          ? {
+              _count: {
+                select: {
+                  payslips: true,
+                  warnings: true,
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { createdAt: "desc" },
+      take: limit !== undefined ? Math.min(Number(limit), 500) : 100,
+      skip: offset !== undefined ? Math.max(0, Number(offset)) : 0,
     });
 
     return res.json(payruns);

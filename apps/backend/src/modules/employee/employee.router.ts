@@ -10,7 +10,7 @@ employeeRouter.use(authenticateJWT);
 // GET /api/employees - list employees with search and filters
 employeeRouter.get("/", async (req, res, next) => {
   try {
-    const { companyId, departmentId, status, search, limit, offset } = req.query;
+    const { companyId, departmentId, status, search, limit, offset, includeCounts } = req.query;
     const where: any = {};
 
     if (companyId) where.companyId = String(companyId);
@@ -38,18 +38,21 @@ employeeRouter.get("/", async (req, res, next) => {
           take: 1,
           select: { id: true, contractNumber: true, wage: true, status: true },
         },
-        _count: {
-          select: {
-            contracts: true,
-            attendances: true,
-            timeOffRequests: true,
-            payslips: true,
-          },
-        },
+        ...(includeCounts === "true"
+          ? {
+              _count: {
+                select: {
+                  contracts: true,
+                  attendances: true,
+                  timeOffRequests: true,
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { employeeCode: "asc" },
-      ...(limit ? { take: Math.min(Number(limit), 100) } : {}),
-      ...(offset ? { skip: Number(offset) } : {}),
+      take: limit !== undefined ? Math.min(Number(limit), 500) : 100,
+      skip: offset !== undefined ? Math.max(0, Number(offset)) : 0,
     });
 
     const isRegularEmployee =

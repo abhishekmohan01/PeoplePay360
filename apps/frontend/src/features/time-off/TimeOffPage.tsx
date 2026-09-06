@@ -46,11 +46,20 @@ export const TimeOffPage = () => {
   const totalRemaining = allocations ? allocations.reduce((sum, a) => sum + (Number(a.remaining) || 0), 0) : 0;
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Pending'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
 
   const filteredRequests = requests?.filter((req) => {
     if (statusFilter === 'Pending') return (req.status || '').toLowerCase() === 'pending';
     return true;
   });
+
+  const totalRequests = filteredRequests?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalRequests / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRequests = filteredRequests?.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
 
   return (
     <div className="flex flex-col max-w-6xl mx-auto w-full p-4 sm:p-6 pb-12">
@@ -220,67 +229,138 @@ export const TimeOffPage = () => {
           {isLoadingRequests ? (
             <div className="p-12 text-center text-text-muted text-sm font-medium">Loading leave requests...</div>
           ) : filteredRequests && filteredRequests.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRequests.map((req) => (
-                <div key={req.id} className="bg-surface border border-border rounded-xl p-4 shadow-sm flex flex-col justify-between gap-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="m-0 text-sm font-semibold text-text-primary">{req.employeeName}</h4>
-                      <span className="text-xs text-text-muted block mt-0.5">{req.type}</span>
-                    </div>
-                    <StatusBadge status={req.status} />
-                  </div>
-                  
-                  <div className="text-xs border-t border-border pt-2.5 mt-1 flex justify-between items-center text-text-secondary">
-                    <span className="font-semibold text-primary text-sm">{req.days} Days</span>
-                    <span>{req.startDate} ➔ {req.endDate}</span>
-                  </div>
+            <>
+              {/* Scroll container */}
+              <div style={{
+                maxHeight: '520px',
+                overflowY: 'auto',
+                paddingRight: '4px',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--border) transparent',
+              }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paginatedRequests!.map((req) => (
+                    <div key={req.id} className="bg-surface border border-border rounded-xl p-4 shadow-sm flex flex-col justify-between gap-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="m-0 text-sm font-semibold text-text-primary">{req.employeeName}</h4>
+                          <span className="text-xs text-text-muted block mt-0.5">{req.type}</span>
+                        </div>
+                        <StatusBadge status={req.status} />
+                      </div>
+                      
+                      <div className="text-xs border-t border-border pt-2.5 mt-1 flex justify-between items-center text-text-secondary">
+                        <span className="font-semibold text-primary text-sm">{req.days} Days</span>
+                        <span>{req.startDate} ➔ {req.endDate}</span>
+                      </div>
 
-                  {/* Approver actions */}
-                  {canApproveTimeOff && req.status === 'Pending' && (
-                    <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                      <button 
-                        type="button"
-                        disabled={refuseMutation.isPending || approveMutation.isPending}
-                        onClick={() => refuseMutation.mutate(req.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        {refuseMutation.isPending && refuseMutation.variables === req.id ? (
-                          <>
-                            <span className="btn-spinner" />
-                            <span>Rejecting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Ban size={13} />
-                            <span>Reject</span>
-                          </>
-                        )}
-                      </button>
-                      <button 
-                        type="button"
-                        disabled={approveMutation.isPending || refuseMutation.isPending}
-                        onClick={() => approveMutation.mutate(req.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-                      >
-                        {approveMutation.isPending && approveMutation.variables === req.id ? (
-                          <>
-                            <span className="btn-spinner" />
-                            <span>Approving...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Check size={13} />
-                            <span>Approve</span>
-                          </>
-                        )}
-                      </button>
+                      {/* Approver actions */}
+                      {canApproveTimeOff && req.status === 'Pending' && (
+                        <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                          <button 
+                            type="button"
+                            disabled={refuseMutation.isPending || approveMutation.isPending}
+                            onClick={() => refuseMutation.mutate(req.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {refuseMutation.isPending && refuseMutation.variables === req.id ? (
+                              <>
+                                <span className="btn-spinner" />
+                                <span>Rejecting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Ban size={13} />
+                                <span>Reject</span>
+                              </>
+                            )}
+                          </button>
+                          <button 
+                            type="button"
+                            disabled={approveMutation.isPending || refuseMutation.isPending}
+                            onClick={() => approveMutation.mutate(req.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                          >
+                            {approveMutation.isPending && approveMutation.variables === req.id ? (
+                              <>
+                                <span className="btn-spinner" />
+                                <span>Approving...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check size={13} />
+                                <span>Approve</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+
+              {/* Pagination toolbar */}
+              {totalPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '12px',
+                  padding: '8px 4px',
+                  borderTop: '1px solid var(--border)',
+                }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, totalRequests)} of {totalRequests} requests
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      disabled={safePage <= 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                        color: 'var(--text-secondary)',
+                        cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: safePage <= 1 ? 0.4 : 1,
+                      }}
+                    >← Prev</button>
+                    <span style={{
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      background: 'var(--elevated)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                    }}>{safePage} / {totalPages}</span>
+                    <button
+                      type="button"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                        color: 'var(--text-secondary)',
+                        cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                        opacity: safePage >= totalPages ? 0.4 : 1,
+                      }}
+                    >Next →</button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
+
             <div className="bg-surface border border-dashed border-border rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
                 <Umbrella size={24} />
