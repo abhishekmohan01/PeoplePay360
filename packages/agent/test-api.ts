@@ -56,6 +56,7 @@ async function runApiTests() {
   if (auditData.data?.actionProposal) {
     console.log(`\n📋 Action Proposal: ${auditData.data.actionProposal.title}`);
   }
+  console.log("Recorded Steps:", auditData.data?.steps);
 
   // Step 4: POST /api/agent/chat (Interactive Map Radar)
   console.log("\n4. Testing POST /api/agent/chat ('Show map radar pins')...");
@@ -84,6 +85,21 @@ async function runApiTests() {
   const payrollData = (await payrollRes.json()) as any;
   console.log("✅ Passed: HTTP 200 received. Preflight score preview:\n");
   console.log(payrollData.data?.answer?.split("\n").slice(0, 8).join("\n"));
+
+  // Step 6: POST /api/agent/chat ("what is the this month payrooll data")
+  console.log("\n6. Testing POST /api/agent/chat ('what is the this month payrooll data')...");
+  const currentMonthRes = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify({
+      prompt: "what is the this month payrooll data",
+    }),
+  });
+  console.assert(currentMonthRes.status === 200, `Expected 200, got ${currentMonthRes.status}`);
+  const currentMonthData = (await currentMonthRes.json()) as any;
+  console.log("✅ Passed: HTTP 200 received. Current month payroll answer preview:\n");
+  console.log(currentMonthData.data?.answer);
+  console.log("Recorded Steps:", currentMonthData.data?.steps?.map((s: any) => s.step));
 
   console.log("\n==========================================");
   console.log("🎉 ALL HTTP API ENDPOINT TESTS PASSED SUCCESSFULLY!");

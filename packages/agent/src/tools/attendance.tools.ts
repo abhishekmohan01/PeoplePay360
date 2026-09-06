@@ -14,7 +14,13 @@ import type {
  * Helper to get day boundaries
  */
 function getDayRange(dateString?: string): { startOfDay: Date; endOfDay: Date; dateFormatted: string } {
-  const target = dateString ? new Date(dateString) : new Date();
+  let target = new Date();
+  if (dateString && dateString.trim().toLowerCase() !== "today") {
+    const parsed = new Date(dateString);
+    if (!isNaN(parsed.getTime())) {
+      target = parsed;
+    }
+  }
   const year = target.getFullYear();
   const month = target.getMonth();
   const day = target.getDate();

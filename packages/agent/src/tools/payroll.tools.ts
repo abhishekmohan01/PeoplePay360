@@ -142,3 +142,56 @@ export async function runPayrollPreflight(params?: {
     recommendedActions,
   };
 }
+
+/**
+ * Returns a high-level payroll overview: recent payruns and current month preflight readiness
+ */
+export async function getPayrollOverview(params?: {
+  companyId?: string;
+  month?: number;
+  year?: number;
+}) {
+  const now = new Date();
+  const year = params?.year || now.getFullYear();
+  const month = params?.month || now.getMonth() + 1;
+
+  // 1. Fetch recent payruns
+  const payruns = await prisma.payrun.findMany({
+    where: params?.companyId ? { companyId: params.companyId } : {},
+    include: {
+      salaryStructure: { select: { name: true, code: true } },
+      _count: { select: { payslips: true, warnings: true } },
+    },
+    orderBy: { periodStart: "desc" },
+    take: 5,
+  });
+
+  // 2. Preflight readiness for the requested/current period
+  const preflight = await runPayrollPreflight({
+    companyId: params?.companyId,
+    month,
+    year,
+  });
+
+  return {
+    targetPeriod: `${year}-${String(month).padStart(2, "0")}`,
+    recentPayruns: payruns.map((p) => ({
+      id: p.id,
+      name: p.name,
+      period: `${p.periodStart.toISOString().split("T")[0]} to ${p.periodEnd.toISOString().split("T")[0]}`,
+      status: p.status,
+      employeeCount: p.employeeCount || p._count.payslips,
+      warningCount: p.warningCount || p._count.warnings,
+    })),
+    preflightReadiness: {
+      score: preflight.readinessScore,
+      status: preflight.status,
+      activeEmployees: preflight.summary.totalActiveEmployees,
+      unresolvedAttendanceGaps: preflight.summary.unresolvedAttendanceGaps,
+      pendingWfhWarnings: preflight.summary.unapprovedWfhWarnings,
+      blockers: preflight.blockers,
+      warnings: preflight.warnings,
+      recommendedActions: preflight.recommendedActions,
+    },
+  };
+}

@@ -21,6 +21,7 @@ import { seedDatabase } from "./src/seed";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+// Reload trigger: 2026-09-06T07:56:00
 
 // Global Middleware
 app.use(cors({ origin: true, credentials: true }));

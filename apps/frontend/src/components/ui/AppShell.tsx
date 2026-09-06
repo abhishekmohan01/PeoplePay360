@@ -1,4 +1,5 @@
 import { TopNav } from './TopNav';
+import { CopilotDrawer } from '../../features/copilot/CopilotDrawer';
 import './AppShell.css';
 
 export const AppShell = ({ children }: { children: React.ReactNode }) => {
@@ -8,6 +9,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
       <main className="app-main">
         {children}
       </main>
+      <CopilotDrawer />
     </div>
   );
 };

@@ -9,7 +9,7 @@ import {
   getLiveAttendancePulse,
   getAttendanceMapData,
 } from "./tools/attendance.tools";
-import { runPayrollPreflight } from "./tools/payroll.tools";
+import { runPayrollPreflight, getPayrollOverview } from "./tools/payroll.tools";
 
 /**
  * Tool definitions exposed to the agent
@@ -51,14 +51,27 @@ export const AGENT_TOOLS_DEFINITIONS = [
     },
   },
   {
-    name: "runPayrollPreflight",
+    name: "getPayrollOverview",
     description:
-      "Performs a pre-flight audit before generating payroll, checking for missing check-outs, unresolved attendance warnings, and expiring contracts.",
+      "Retrieves current payroll data, recent payruns, and pre-flight readiness audit for a specific month and year. Always use this when the user asks about payroll data or 'this month's payroll'.",
     parameters: {
       type: "object",
       properties: {
-        month: { type: "number", description: "Month number 1-12" },
-        year: { type: "number", description: "4-digit year e.g. 2026" },
+        month: { type: "number", description: "Month number 1-12 (defaults to current month if omitted)" },
+        year: { type: "number", description: "4-digit year (defaults to current year if omitted)" },
+        companyId: { type: "string", description: "Optional company ID filter" },
+      },
+    },
+  },
+  {
+    name: "runPayrollPreflight",
+    description:
+      "Performs a pre-flight audit before generating payroll, checking for missing check-outs, unresolved attendance warnings, and expiring contracts. Defaults to current month and year.",
+    parameters: {
+      type: "object",
+      properties: {
+        month: { type: "number", description: "Month number 1-12 (defaults to current month if omitted)" },
+        year: { type: "number", description: "4-digit year e.g. 2026 (defaults to current year if omitted)" },
         companyId: { type: "string", description: "Optional company ID filter" },
       },
     },
@@ -90,6 +103,8 @@ export async function executeTool(name: string, args: Record<string, any> = {}):
       return await getLiveAttendancePulse(args);
     case "runPayrollPreflight":
       return await runPayrollPreflight(args);
+    case "getPayrollOverview":
+      return await getPayrollOverview(args);
     case "getAttendanceMapData":
       return await getAttendanceMapData(args);
     default:
@@ -134,8 +149,8 @@ export async function runAgent(
   // Mode A: Google Gemini API (if key present)
   if (geminiApiKey) {
     try {
-      addStep("Contacting Gemini Engine with registered tool declarations...", "Gemini 2.0 Flash");
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+      addStep("Contacting Gemini Engine with registered tool declarations...", "Gemini 2.5 Flash");
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
       const geminiTools = [
         {
@@ -146,6 +161,12 @@ export async function runAgent(
           })),
         },
       ];
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const monthName = now.toLocaleString("en-US", { month: "long" });
+      const currentDateFormatted = now.toISOString().split("T")[0];
 
       const res = await fetch(url, {
         method: "POST",
@@ -161,7 +182,20 @@ export async function runAgent(
           systemInstruction: {
             parts: [
               {
-                text: "You are the PeoplePay360 Agentic HR Copilot. You specialize in attendance geolocation audits, WFH verification, and payroll pre-flight checks. Always use tools to inspect real data. Maintain an executive, precise tone.",
+                text: `You are the PeoplePay360 Agentic HR Copilot. You specialize in attendance geolocation audits, WFH verification, and payroll pre-flight checks.
+
+CURRENT SYSTEM CONTEXT:
+- Today's date: ${currentDateFormatted}
+- Current Month: ${currentMonth} (${monthName})
+- Current Year: ${currentYear}
+
+CRITICAL RULES:
+1. When the user asks about "this month", "today", "current payroll", "payroll data", or omits dates, AUTOMATICALLY assume the current month (${currentMonth}) and current year (${currentYear}).
+2. NEVER decline the request or tell the user to provide the month and year when they say "this month" or "today". Immediately execute the appropriate tool:
+   - For general payroll queries, "this month payroll data", or payruns: invoke getPayrollOverview with month=${currentMonth}, year=${currentYear}.
+   - For pre-flight audits or payroll readiness: invoke runPayrollPreflight with month=${currentMonth}, year=${currentYear}.
+   - For attendance audits or GPS checks: invoke auditWfhAndGeolocation with date="${currentDateFormatted}".
+3. Always inspect real database data through your declared tools. Maintain an executive, clear, concise tone. Format key stats with bullet points.`,
               },
             ],
           },
@@ -244,35 +278,49 @@ export async function runAgent(
   // Mode B: Deterministic Intelligent Fallback Engine
   addStep("Using Local Agentic Reasoning Engine.", "Deterministic Planner");
   const lowerPrompt = prompt.toLowerCase();
-
-  // 1. Payroll Pre-flight Intent (Check first if prompt mentions payroll/preflight)
-  if (
-    lowerPrompt.includes("payroll") ||
+  const isPayrollQuery =
+    /payr?o+l+/i.test(lowerPrompt) ||
+    /pay\s*runs?/i.test(lowerPrompt) ||
+    /salar(y|ies)/i.test(lowerPrompt) ||
     lowerPrompt.includes("preflight") ||
-    lowerPrompt.includes("payrun") ||
-    lowerPrompt.includes("readiness")
-  ) {
-    addStep("Intent detected: Payroll Pre-Flight Audit.", "runPayrollPreflight");
-    const preflight = await runPayrollPreflight({
+    lowerPrompt.includes("readiness") ||
+    (lowerPrompt.includes("this month") && (lowerPrompt.includes("data") || lowerPrompt.includes("pay")));
+
+  // 1. Payroll Overview & Pre-flight Intent
+  if (isPayrollQuery) {
+    addStep("Intent detected: Payroll Overview & Pre-Flight.", "getPayrollOverview");
+    const overview = await getPayrollOverview({
       companyId: context?.companyId,
     });
-    addStep(`Pre-flight score calculated: ${preflight.readinessScore}/100 (${preflight.status}).`);
+    addStep(`Payroll data retrieved: ${overview.recentPayruns.length} payrun(s), readiness score ${overview.preflightReadiness.score}/100.`);
 
-    const answer = `### Payroll Pre-Flight Audit (${preflight.period})
+    let recentPayrunsText = "No previous payruns on record.";
+    if (overview.recentPayruns.length > 0) {
+      recentPayrunsText = overview.recentPayruns
+        .map(
+          (p) =>
+            `- **${p.name}** (\`${p.status}\`): ${p.employeeCount} employees, ${p.warningCount} warnings (${p.period})`
+        )
+        .join("\n");
+    }
 
-**Readiness Status:** \`${preflight.status}\` (${preflight.readinessScore}% Score)
+    const preflight = overview.preflightReadiness;
+    const answer = `### Payroll Data & Readiness Overview (${overview.targetPeriod})
 
-#### Summary Metrics:
-- **Active Employees:** ${preflight.summary.totalActiveEmployees}
-- **Unresolved Attendance Gaps:** ${preflight.summary.unresolvedAttendanceGaps}
-- **Pending WFH Warnings:** ${preflight.summary.unapprovedWfhWarnings}
-- **Expiring Contracts (Next 30 Days):** ${preflight.summary.expiringContractsCount}
-- **Pending Time-Off Requests:** ${preflight.summary.pendingTimeOffRequests}
+**Readiness Status:** \`${preflight.status}\` (${preflight.score}% Score)
+
+#### Recent Payruns:
+${recentPayrunsText}
+
+#### Current Month Metrics (${overview.targetPeriod}):
+- **Active Employees:** ${preflight.activeEmployees}
+- **Unresolved Attendance Gaps:** ${preflight.unresolvedAttendanceGaps}
+- **Pending WFH Warnings:** ${preflight.pendingWfhWarnings}
 
 ${
   preflight.blockers.length > 0
     ? `#### 🚫 Critical Blockers:\n${preflight.blockers.map((b) => `- ${b}`).join("\n")}`
-    : `✅ **Zero Critical Blockers:** Payroll run can be safely calculated.`
+    : `✅ **Zero Critical Blockers:** Payroll run can be safely processed.`
 }
 
 ${
@@ -287,7 +335,7 @@ ${preflight.recommendedActions.map((a) => `- ${a}`).join("\n")}`;
     return {
       answer,
       steps,
-      toolResults: { runPayrollPreflight: preflight },
+      toolResults: { getPayrollOverview: overview },
     };
   }
 
