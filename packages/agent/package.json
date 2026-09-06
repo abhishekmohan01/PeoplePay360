@@ -8,6 +8,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "bun run test-runner.ts",
+    "seed:demo": "bun run seed-demo.ts"
+  },
   "dependencies": {
     "db": "*",
     "dotenv": "^17.4.2"
