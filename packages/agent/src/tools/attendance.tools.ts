@@ -6,6 +6,8 @@ import type {
   BatchResolveResult,
   AttendancePulse,
   GeoCoordinate,
+  MapPin,
+  AttendanceMapData,
 } from "../types";
 
 /**
@@ -246,5 +248,76 @@ export async function getLiveAttendancePulse(params?: { companyId?: string }): P
     wfhCount,
     overduePunchesCount,
     activeEmployees,
+  };
+}
+
+/**
+ * Exports punches as map pins with coordinates and color coding for visual radar
+ */
+export async function getAttendanceMapData(params?: {
+  date?: string;
+  companyId?: string;
+  hqCoordinates?: GeoCoordinate;
+}): Promise<AttendanceMapData> {
+  const hqCoords = params?.hqCoordinates || DEFAULT_COMPANY_HQ;
+  const audit = await auditWfhAndGeolocation(params);
+
+  const pins: MapPin[] = [];
+  let verifiedCount = 0;
+  let anomalyCount = 0;
+
+  let minLat = hqCoords.latitude;
+  let maxLat = hqCoords.latitude;
+  let minLng = hqCoords.longitude;
+  let maxLng = hqCoords.longitude;
+
+  for (const item of audit.items) {
+    if (!item.coordinates) continue;
+
+    const lat = item.coordinates.latitude;
+    const lng = item.coordinates.longitude;
+
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+
+    let pinColor = "#6B7280"; // default gray
+    if (item.classification === "VERIFIED_OFFICE") {
+      pinColor = "#10B981"; // Emerald green
+      verifiedCount++;
+    } else if (item.classification === "VERIFIED_WFH") {
+      pinColor = "#3B82F6"; // Vibrant blue
+      verifiedCount++;
+    } else if (item.classification === "SUSPICIOUS_OFFICE_OUT_OF_BOUNDS") {
+      pinColor = "#EF4444"; // Red
+      anomalyCount++;
+    } else if (item.classification === "SUSPICIOUS_WFH_ANOMALY") {
+      pinColor = "#F59E0B"; // Amber
+      anomalyCount++;
+    }
+
+    pins.push({
+      id: item.recordId,
+      employeeName: item.employeeName,
+      latitude: lat,
+      longitude: lng,
+      checkInTime: item.checkInTime,
+      workMode: item.isWfh ? "WFH" : "OFFICE",
+      classification: item.classification,
+      pinColor,
+      distanceFromHqKm: item.distanceFromHqKm,
+      label: `${item.employeeName} (${item.isWfh ? "WFH" : "Office"}): ${item.distanceFromHqKm ?? 0}km from HQ`,
+    });
+  }
+
+  return {
+    date: audit.date,
+    companyHq: hqCoords,
+    totalPins: pins.length,
+    verifiedCount,
+    anomalyCount,
+    pins,
+    bounds: pins.length > 0 ? { minLat, maxLat, minLng, maxLng } : null,
   };
 }

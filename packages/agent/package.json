@@ -10,6 +10,7 @@
   },
   "scripts": {
     "test": "bun run test-runner.ts",
+    "test:api": "bun run test-api.ts",
     "seed:demo": "bun run seed-demo.ts"
   },
   "dependencies": {

@@ -7,6 +7,7 @@ import {
   auditWfhAndGeolocation,
   batchResolveWfhWarnings,
   getLiveAttendancePulse,
+  getAttendanceMapData,
 } from "./tools/attendance.tools";
 import { runPayrollPreflight } from "./tools/payroll.tools";
 
@@ -62,6 +63,18 @@ export const AGENT_TOOLS_DEFINITIONS = [
       },
     },
   },
+  {
+    name: "getAttendanceMapData",
+    description:
+      "Generates interactive map radar pins with GPS coordinates, distance, and status colors (green for verified, red for out-of-bounds anomaly) for visual map plotting.",
+    parameters: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Target date in YYYY-MM-DD format (defaults to today)" },
+        companyId: { type: "string", description: "Optional company ID filter" },
+      },
+    },
+  },
 ];
 
 /**
@@ -77,6 +90,8 @@ export async function executeTool(name: string, args: Record<string, any> = {}):
       return await getLiveAttendancePulse(args);
     case "runPayrollPreflight":
       return await runPayrollPreflight(args);
+    case "getAttendanceMapData":
+      return await getAttendanceMapData(args);
     default:
       throw new Error(`Unknown agent tool: ${name}`);
   }
@@ -276,7 +291,50 @@ ${preflight.recommendedActions.map((a) => `- ${a}`).join("\n")}`;
     };
   }
 
-  // 2. Audit / Geolocation / WFH Intent
+  // 2. Interactive Map / Radar Intent
+  if (
+    lowerPrompt.includes("map") ||
+    lowerPrompt.includes("radar") ||
+    lowerPrompt.includes("pin") ||
+    lowerPrompt.includes("plot") ||
+    lowerPrompt.includes("visualize")
+  ) {
+    addStep("Intent detected: Interactive Attendance Map Radar.", "getAttendanceMapData");
+    const mapData = await getAttendanceMapData({
+      date: context?.date,
+      companyId: context?.companyId,
+    });
+    addStep(`Generated radar data: ${mapData.totalPins} pins (${mapData.verifiedCount} verified, ${mapData.anomalyCount} anomalies).`);
+
+    const answer = `### Attendance Map & Radar Coordinates (${mapData.date})
+
+- **Total Map Pins Plotted:** ${mapData.totalPins}
+- **Verified Locations:** ${mapData.verifiedCount} 🟢
+- **Flagged Anomalies:** ${mapData.anomalyCount} 🔴
+- **Company HQ Base:** [GPS: ${mapData.companyHq.latitude.toFixed(4)}, ${mapData.companyHq.longitude.toFixed(4)}]
+
+#### Pin Breakdown:
+${mapData.pins
+  .map(
+    (p) =>
+      `- **${p.employeeName}** [${p.workMode}]: ${p.distanceFromHqKm ?? 0}km from HQ — \`${p.classification}\` (Pin Color: \`${p.pinColor}\`)`
+  )
+  .join("\n")}
+
+${
+  mapData.anomalyCount > 0
+    ? `\n⚠️ **Visual Alert:** Red pins indicate punches that violate company perimeter policies.`
+    : `\n✅ **All Clear:** All plotted pins are within compliant regions.`
+}`;
+
+    return {
+      answer,
+      steps,
+      toolResults: { getAttendanceMapData: mapData },
+    };
+  }
+
+  // 3. Audit / Geolocation / WFH Intent
   if (
     lowerPrompt.includes("audit") ||
     lowerPrompt.includes("attendance") ||

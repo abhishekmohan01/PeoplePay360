@@ -104,3 +104,31 @@ export interface AgentResponse {
     result: any;
   } | null;
 }
+
+export interface MapPin {
+  id: string;
+  employeeName: string;
+  latitude: number;
+  longitude: number;
+  checkInTime: string;
+  workMode: "OFFICE" | "WFH";
+  classification: PunchClassification;
+  pinColor: string; // Hex color code (e.g. #10B981 for verified, #EF4444 for anomaly)
+  distanceFromHqKm: number | null;
+  label: string;
+}
+
+export interface AttendanceMapData {
+  date: string;
+  companyHq: GeoCoordinate;
+  totalPins: number;
+  verifiedCount: number;
+  anomalyCount: number;
+  pins: MapPin[];
+  bounds: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  } | null;
+}
