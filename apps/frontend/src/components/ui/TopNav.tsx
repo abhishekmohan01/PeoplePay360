@@ -44,8 +44,12 @@ export const TopNav = () => {
           </NavLink>
         )}
 
-        {/* Contracts - HR, Payroll, Admin only */}
-        {(isHR || isPayroll || isAdmin) && (
+        {/* Contracts - Employees see My Contracts, HR/Admin see Contracts */}
+        {isEmployeeOnly ? (
+          <NavLink to="/contracts" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            My Contracts
+          </NavLink>
+        ) : (isHR || isPayroll || isAdmin) && (
           <NavLink to="/contracts" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
             Contracts
           </NavLink>
@@ -67,6 +71,13 @@ export const TopNav = () => {
         <NavLink to="/time-off" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
           {isEmployeeOnly ? 'My Time Off' : 'Time Off'}
         </NavLink>
+
+        {/* My Payslips - Employee only navigation link */}
+        {isEmployeeOnly && (
+          <NavLink to="/payslips" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            My Payslips
+          </NavLink>
+        )}
 
         {/* Payroll Config - Payroll & Admin only */}
         {(isPayroll || isAdmin) && (

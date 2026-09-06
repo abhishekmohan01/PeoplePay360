@@ -52,7 +52,21 @@ employeeRouter.get("/", async (req, res, next) => {
       ...(offset ? { skip: Number(offset) } : {}),
     });
 
-    return res.json(employees);
+    const isRegularEmployee =
+      req.user?.roles.includes("EMPLOYEE") &&
+      !req.user.roles.includes("ADMIN") &&
+      !req.user.roles.includes("HR_MANAGER") &&
+      !req.user.roles.includes("PAYROLL_USER");
+
+    const sanitized = employees.map((emp) => {
+      if (isRegularEmployee && emp.id !== req.user?.employeeId) {
+        const { contracts, bankAccountNumber, bankName, taxIdentifier, ...publicFields } = emp as any;
+        return publicFields;
+      }
+      return emp;
+    });
+
+    return res.json(sanitized);
   } catch (err) {
     next(err);
   }
@@ -202,6 +216,32 @@ employeeRouter.get("/:id", async (req, res, next) => {
 
     if (!employee) {
       return res.status(404).json({ error: true, message: "Employee not found" });
+    }
+
+    const isRegularEmployee =
+      req.user?.roles.includes("EMPLOYEE") &&
+      !req.user.roles.includes("ADMIN") &&
+      !req.user.roles.includes("HR_MANAGER") &&
+      !req.user.roles.includes("PAYROLL_USER");
+
+    if (isRegularEmployee && employee.id !== req.user?.employeeId) {
+      // Strip sensitive PII, financial details, and admin contracts for colleagues
+      const {
+        bankAccountNumber,
+        bankName,
+        taxIdentifier,
+        privateEmail,
+        privatePhone,
+        contracts,
+        user,
+        _count,
+        ...publicProfile
+      } = employee as any;
+
+      return res.json({
+        ...publicProfile,
+        isPublicViewOnly: true,
+      });
     }
 
     return res.json(employee);

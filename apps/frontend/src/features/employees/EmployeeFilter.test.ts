@@ -97,17 +97,17 @@ describe('filterEmployees - All Cases', () => {
     it('matches INACTIVE employees with "INACTIVE" or "Inactive"', () => {
       const resultUpper = filterEmployees(mockEmployees, { statusFilter: 'INACTIVE' });
       expect(resultUpper.length).toBe(1);
-      expect(resultUpper[0].name).toBe('Stanley Hudson');
+      expect(resultUpper[0]!.name).toBe('Stanley Hudson');
 
       const resultTitle = filterEmployees(mockEmployees, { statusFilter: 'Inactive' });
       expect(resultTitle.length).toBe(1);
-      expect(resultTitle[0].name).toBe('Stanley Hudson');
+      expect(resultTitle[0]!.name).toBe('Stanley Hudson');
     });
 
     it('matches TERMINATED employees with "TERMINATED" or "Terminated"', () => {
       const result = filterEmployees(mockEmployees, { statusFilter: 'Terminated' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Ryan Howard');
+      expect(result[0]!.name).toBe('Ryan Howard');
     });
 
     it('handles status with extra whitespace', () => {
@@ -125,7 +125,7 @@ describe('filterEmployees - All Cases', () => {
     it('matches department exactly', () => {
       const result = filterEmployees(mockEmployees, { deptFilter: 'Finance' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Stanley Hudson');
+      expect(result[0]!.name).toBe('Stanley Hudson');
     });
 
     it('matches department case-insensitively and with trimmed whitespace', () => {
@@ -136,7 +136,7 @@ describe('filterEmployees - All Cases', () => {
     it('supports nested department.name object', () => {
       const nestedDeptEmployees: Employee[] = [
         {
-          ...mockEmployees[0],
+          ...mockEmployees[0]!,
           departmentName: undefined,
           department: { id: 'd1', name: 'Engineering', code: 'ENG' },
         },
@@ -179,7 +179,7 @@ describe('filterEmployees - All Cases', () => {
         statusFilter: 'Inactive',
       });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Stanley Hudson');
+      expect(result[0]!.name).toBe('Stanley Hudson');
     });
   });
 
@@ -187,13 +187,13 @@ describe('filterEmployees - All Cases', () => {
     it('searches by name case-insensitively', () => {
       const result = filterEmployees(mockEmployees, { search: 'michael' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Michael Scott');
+      expect(result[0]!.name).toBe('Michael Scott');
     });
 
     it('searches by employee code', () => {
       const result = filterEmployees(mockEmployees, { search: 'emp-007' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Michael Scott');
+      expect(result[0]!.name).toBe('Michael Scott');
     });
 
     it('searches by job title', () => {
@@ -204,19 +204,19 @@ describe('filterEmployees - All Cases', () => {
     it('searches by email address', () => {
       const result = filterEmployees(mockEmployees, { search: 'michael@peoplepay360.com' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Michael Scott');
+      expect(result[0]!.name).toBe('Michael Scott');
     });
 
     it('searches across multiple tokens', () => {
       const result = filterEmployees(mockEmployees, { search: 'michael manager' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Michael Scott');
+      expect(result[0]!.name).toBe('Michael Scott');
     });
 
     it('handles search with leading and trailing spaces', () => {
       const result = filterEmployees(mockEmployees, { search: '   scott   ' });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Michael Scott');
+      expect(result[0]!.name).toBe('Michael Scott');
     });
   });
 
@@ -240,7 +240,8 @@ describe('filterEmployees - All Cases', () => {
         statusFilter: 'ACTIVE',
       });
       expect(result.length).toBe(1);
-      expect(result[0].name).toBe('Valid Name');
+      expect(result[0]!.name).toBe('Valid Name');
     });
   });
+
 });

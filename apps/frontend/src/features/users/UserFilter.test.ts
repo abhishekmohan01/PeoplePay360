@@ -77,24 +77,24 @@ describe('User Management Multi-Role Filter', () => {
   it('filters by HR_MANAGER and finds Rohan Patel', () => {
     const result = filterUsers(mockUsers, '', 'HR_MANAGER');
     expect(result.length).toBe(1);
-    expect(result[0].employeeName).toBe('Rohan Patel');
+    expect(result[0]!.employeeName).toBe('Rohan Patel');
   });
 
   it('filters by TIME_OFF_ADMIN and finds Maya Shah', () => {
     const result = filterUsers(mockUsers, '', 'TIME_OFF_ADMIN');
     expect(result.length).toBe(1);
-    expect(result[0].employeeName).toBe('Maya Shah');
+    expect(result[0]!.employeeName).toBe('Maya Shah');
   });
 
   it('filters by ADMIN and finds Nisha Rao', () => {
     const result = filterUsers(mockUsers, '', 'ADMIN');
     expect(result.length).toBe(1);
-    expect(result[0].employeeName).toBe('Nisha Rao');
+    expect(result[0]!.employeeName).toBe('Nisha Rao');
   });
 
   it('searches by name or email with active role filter', () => {
     const result = filterUsers(mockUsers, 'rohan', 'PAYROLL_USER');
     expect(result.length).toBe(1);
-    expect(result[0].employeeName).toBe('Rohan Patel');
+    expect(result[0]!.employeeName).toBe('Rohan Patel');
   });
 });

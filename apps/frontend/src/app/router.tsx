@@ -15,6 +15,7 @@ import { PayrollConfigPage } from '../features/payroll-config/PayrollConfigPage'
 import { PayrollDashboardPage } from '../features/payroll/PayrollDashboardPage';
 import { PayrunListPage } from '../features/payroll/PayrunListPage';
 import { PayrunDetailPage } from '../features/payroll/PayrunDetailPage';
+import { MyPayslipsPage } from '../features/payroll/MyPayslipsPage';
 import { UserManagementPage } from '../features/users/UserManagementPage';
 
 // We'll import real pages as they are built.
@@ -95,7 +96,7 @@ export const router = createBrowserRouter([
   {
     path: '/contracts',
     element: (
-      <RoleRoute allowedRoles={['HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
+      <RoleRoute allowedRoles={['EMPLOYEE', 'HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
         <AppShell><ContractListPage /></AppShell>
       </RoleRoute>
     ),
@@ -103,7 +104,7 @@ export const router = createBrowserRouter([
   {
     path: '/contracts/:contractId',
     element: (
-      <RoleRoute allowedRoles={['HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
+      <RoleRoute allowedRoles={['EMPLOYEE', 'HR_MANAGER', 'PAYROLL_USER', 'ADMIN']}>
         <AppShell><ContractDetail /></AppShell>
       </RoleRoute>
     ),
@@ -127,6 +128,10 @@ export const router = createBrowserRouter([
   {
     path: '/time-off',
     element: <ProtectedRoute><AppShell><TimeOffPage /></AppShell></ProtectedRoute>,
+  },
+  {
+    path: '/payslips',
+    element: <ProtectedRoute><AppShell><MyPayslipsPage /></AppShell></ProtectedRoute>,
   },
   {
     path: '/payroll-config',

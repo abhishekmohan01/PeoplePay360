@@ -18,6 +18,11 @@ contractRouter.get("/", async (req, res, next) => {
     if (departmentId) where.departmentId = String(departmentId);
     if (status) where.status = String(status);
 
+    // If regular EMPLOYEE, can only view own contracts
+    if (req.user?.roles.includes("EMPLOYEE") && !req.user.roles.includes("ADMIN") && !req.user.roles.includes("HR_MANAGER") && !req.user.roles.includes("PAYROLL_USER") && req.user.employeeId) {
+      where.employeeId = req.user.employeeId;
+    }
+
     const contracts = await prisma.contract.findMany({
       where,
       include: {
@@ -179,6 +184,17 @@ contractRouter.get("/:id", async (req, res, next) => {
 
     if (!contract) {
       return res.status(404).json({ error: true, message: "Contract not found" });
+    }
+
+    // Role check: employee can only see their own contract
+    if (
+      req.user?.roles.includes("EMPLOYEE") &&
+      !req.user.roles.includes("ADMIN") &&
+      !req.user.roles.includes("HR_MANAGER") &&
+      !req.user.roles.includes("PAYROLL_USER") &&
+      req.user.employeeId !== contract.employeeId
+    ) {
+      return res.status(403).json({ error: true, message: "Forbidden: You can only view your own contract" });
     }
 
     return res.json(contract);

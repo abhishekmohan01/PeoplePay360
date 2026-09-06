@@ -20,7 +20,13 @@ payslipRouter.get("/", async (req, res, next) => {
     if (status) where.status = String(status);
 
     // If regular EMPLOYEE, can only view own payslips
-    if (req.user?.roles.length === 1 && req.user.roles.includes("EMPLOYEE") && req.user.employeeId) {
+    if (
+      req.user?.roles.includes("EMPLOYEE") &&
+      !req.user.roles.includes("ADMIN") &&
+      !req.user.roles.includes("PAYROLL_USER") &&
+      !req.user.roles.includes("HR_MANAGER") &&
+      req.user.employeeId
+    ) {
       where.employeeId = req.user.employeeId;
     }
 

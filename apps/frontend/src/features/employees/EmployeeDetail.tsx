@@ -42,6 +42,9 @@ export const EmployeeDetail = () => {
   const navigate = useNavigate();
   const { data: employee, isLoading, isError } = useEmployee(employeeId!);
   const canManageHR = useAuthStore((state) => state.canManageHR)();
+  const currentUser = useAuthStore((state) => state.user);
+  const isEmployeeOnly = useAuthStore((state) => state.isEmployeeOnly)();
+  const isViewingColleague = isEmployeeOnly && currentUser?.employeeId && currentUser.employeeId !== employeeId;
 
   const [activeTab, setActiveTab] = useState<'work' | 'private' | 'contracts'>('work');
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -315,38 +318,48 @@ export const EmployeeDetail = () => {
           }`}
         >
           <Briefcase size={15} />
-          <span>Work & Organization</span>
+          <span>Work Information</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('private')}
-          className={`pb-3 px-3 font-semibold text-xs sm:text-sm cursor-pointer transition-colors relative flex items-center gap-2 ${
-            activeTab === 'private'
-              ? 'text-primary border-b-2 border-primary -mb-px'
-              : 'text-text-muted hover:text-text-primary'
-          }`}
-        >
-          <Lock size={15} />
-          <span>Private Information</span>
-        </button>
+        {!isViewingColleague && (
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveTab('private')}
+              className={`pb-3 px-3 font-semibold text-xs sm:text-sm cursor-pointer transition-colors relative flex items-center gap-2 ${
+                activeTab === 'private'
+                  ? 'text-primary border-b-2 border-primary -mb-px'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              <Lock size={15} />
+              <span>Private Information</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('contracts')}
-          className={`pb-3 px-3 font-semibold text-xs sm:text-sm cursor-pointer transition-colors relative flex items-center gap-2 ${
-            activeTab === 'contracts'
-              ? 'text-primary border-b-2 border-primary -mb-px'
-              : 'text-text-muted hover:text-text-primary'
-          }`}
-        >
-          <FileText size={15} />
-          <span>Contracts & Compensation</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-elevated text-[10px] text-text-secondary border border-border">
-            {employee._count?.contracts ?? employee.contracts?.length ?? 0}
-          </span>
-        </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('contracts')}
+              className={`pb-3 px-3 font-semibold text-xs sm:text-sm cursor-pointer transition-colors relative flex items-center gap-2 ${
+                activeTab === 'contracts'
+                  ? 'text-primary border-b-2 border-primary -mb-px'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              <FileText size={15} />
+              <span>Contracts &amp; Salary</span>
+            </button>
+          </>
+        )}
       </div>
+
+      {isViewingColleague && (
+        <div className="mb-4 p-3.5 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3 text-xs text-text-secondary">
+          <ShieldCheck size={16} className="text-primary flex-shrink-0" />
+          <span>
+            <strong>Public Directory View:</strong> You are viewing standard public work information for your colleague. Private PII and compensation details are restricted.
+          </span>
+        </div>
+      )}
 
       {/* TAB 1: WORK & ORGANIZATION */}
       {activeTab === 'work' && (
