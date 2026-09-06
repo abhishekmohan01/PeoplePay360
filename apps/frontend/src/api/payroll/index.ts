@@ -301,6 +301,8 @@ export interface PayslipSummary {
   totalDeductions: number;
   netSalary: number;
   status: string;
+  periodStart?: string;
+  periodEnd?: string;
   warningCount: number;
   lines?: PayslipLineItem[];
 }
@@ -387,6 +389,26 @@ export async function validatePayrun(id: string): Promise<any> {
 
 export async function markPayrunPaid(id: string): Promise<any> {
   return apiClient.post(`/payruns/${id}/mark-paid`);
+}
+
+export async function getPayslips(params?: { employeeId?: string; status?: string }): Promise<PayslipSummary[]> {
+  const data = await apiClient.get<any[]>('/payslips', params as any);
+  return (data || []).map((ps: any) => ({
+    id: ps.id,
+    employeeId: ps.employeeId,
+    employeeName: ps.employee ? `${ps.employee.firstName} ${ps.employee.lastName}`.trim() : 'Unknown',
+    employeeCode: ps.employee?.employeeCode,
+    jobPosition: ps.employee?.jobPosition || 'Staff',
+    departmentName: ps.employee?.department?.name || 'General',
+    basicSalary: Number(ps.basicSalary || 0),
+    grossSalary: Number(ps.grossSalary || 0),
+    totalDeductions: Number(ps.totalDeductions || 0),
+    netSalary: Number(ps.netSalary || 0),
+    status: ps.status,
+    periodStart: ps.periodStart ? ps.periodStart.split('T')[0] : '',
+    periodEnd: ps.periodEnd ? ps.periodEnd.split('T')[0] : '',
+    warningCount: ps.warningCount || 0,
+  }));
 }
 
 export async function getPayslip(id: string): Promise<PayslipSummary> {
