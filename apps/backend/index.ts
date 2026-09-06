@@ -16,10 +16,12 @@ import { salaryRuleRouter } from "./src/modules/payroll/salary-rule.router";
 import { payrunRouter } from "./src/modules/payroll/payrun.router";
 import { payslipRouter } from "./src/modules/payroll/payslip.router";
 import { dashboardRouter } from "./src/modules/dashboard/dashboard.router";
+import { agentRouter } from "./src/modules/agent/agent.router";
 import { seedDatabase } from "./src/seed";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+// Reload trigger: 2026-09-06T07:56:00
 
 // Global Middleware
 app.use(cors({ origin: true, credentials: true }));
@@ -55,6 +57,7 @@ app.use("/api/salary-rules", salaryRuleRouter);
 app.use("/api/payruns", payrunRouter);
 app.use("/api/payslips", payslipRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/agent", agentRouter);
 
 // Global Error Handler
 app.use(errorHandler);

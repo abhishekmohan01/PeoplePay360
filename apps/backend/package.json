@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@types/express": "^5.0.6",
+    "agent": "*",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "db": "*",

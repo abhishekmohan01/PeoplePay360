@@ -1,0 +1,26 @@
+{
+  "name": "agent",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun run test-runner.ts",
+    "test:api": "bun run test-api.ts",
+    "seed:demo": "bun run seed-demo.ts"
+  },
+  "dependencies": {
+    "db": "*",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
